@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ocptv-autoval-ssd"
+version = "0.0.1"
+description = "Autoval SSD tests"
+readme = "README.md"
+authors = [
+    { name = "OCP Test & Validation", email = "ocp-test-validation@OCP-All.groups.io" },
+]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Topic :: System :: Hardware",
+]
+keywords = ["ocp", "ocptv", "autoval", "hardware", "testing", "storage", "ssd", "nvme"]
+dependencies = [
+    "ocptv-autoval==0.0.1"
+]
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+publish = ["build", "twine"]
+
+[project.urls]
+"Homepage" = "https://github.com/opencomputeproject/ocp-diag-autoval-ssd"
+"Bug reports" = "https://github.com/opencomputeproject/ocp-diag-autoval-ssd/issues"
+"Source" = "https://github.com/opencomputeproject/ocp-diag-autoval-ssd"
+
+[tool.setuptools.package-data]
+"*" = ["*.json"]
+
