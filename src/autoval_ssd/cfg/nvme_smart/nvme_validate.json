@@ -1,0 +1,19 @@
+{
+    "nvme": {
+        "smart-log": {
+            "temperature": "<348",
+            "critical_warning": "==",
+            "avail_spare": ">80",
+            "media_errors": "=="
+        },
+        "ocp-smart-add-log": {
+            "Bad user nand blocks - Raw": "~3",
+            "Bad system nand blocks - Raw": "~3",
+            "Uncorrectable read error count": ">=0",
+            "End to end corrected errors": "~2",
+            "End to end detected errors": "~2",
+            "PCIe correctable error count": "~50",
+            "Incomplete shutdowns": ">=0"
+          }
+    }
+}

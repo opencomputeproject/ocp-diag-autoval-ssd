@@ -1,0 +1,12 @@
+{
+    "skip_iops_validation": true,
+    "drive_type": "ssd",
+    "run_definition": {
+        "randrw": {
+            "template": "flash_fio_readiness.job",
+            "args": {
+                "RUNTIME": "30m"
+            }
+        }
+    }
+}

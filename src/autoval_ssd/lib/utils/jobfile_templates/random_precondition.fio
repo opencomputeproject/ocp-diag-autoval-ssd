@@ -1,0 +1,13 @@
+[global]
+direct=1
+rw=randwrite
+bs=4k
+iodepth=4
+ioengine=libaio
+numjobs=1
+size=100%
+norandommap
+randrepeat=0
+name=precond_rand
+invalidate=1
+group_reporting=1

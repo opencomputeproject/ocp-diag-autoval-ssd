@@ -1,0 +1,39 @@
+{
+    "power_trigger": true,
+    "power_cycle": "warm",
+    "power_random_time": false,
+    "write_fio": {
+        "write": {
+            "template": "basic_write.fio",
+            "filesystem_type" : "ext4",
+            "filesystem_options" : "",
+            "filesystem": true,
+            "args": {
+                "BLKSIZE": "4k",
+                "DEPTH": 128,
+                "RUNTIME": "10m",
+                "SIZE": "100G",
+                "RW": "randwrite",
+                "VERIFY": "md5"
+            }
+        }
+    },
+    "read_fio": {
+        "read": {
+            "template": "basic_read.fio",
+            "filesystem_type" : "ext4",
+            "filesystem_options" : "",
+            "filesystem": true,
+            "skip_fs": true,
+            "args": {
+                "BLKSIZE": "4k",
+                "DEPTH": 128,
+                "RUNTIME": "10m",
+                "SIZE": "100G",
+                "RW": "randread",
+                "VERIFY": "md5"
+            }
+        }
+    }
+
+}

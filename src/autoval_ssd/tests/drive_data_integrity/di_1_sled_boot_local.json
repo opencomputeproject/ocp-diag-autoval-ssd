@@ -1,0 +1,6 @@
+{
+    "cycle_count": 1,
+    "cycle_type": "sled-cycle",
+    "only_boot_drive": true,
+    "remote_fio": false
+}

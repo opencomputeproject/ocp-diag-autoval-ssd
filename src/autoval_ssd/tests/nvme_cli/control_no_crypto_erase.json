@@ -1,0 +1,6 @@
+{
+  "drive_type": "ssd",
+  "drive_interface": "nvme",
+  "check_crypto_erase": false,
+  "include_boot_drive": true
+}

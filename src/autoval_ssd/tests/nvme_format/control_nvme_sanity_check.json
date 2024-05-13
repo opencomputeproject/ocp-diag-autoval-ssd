@@ -1,0 +1,23 @@
+{
+    "fstype": "ext4",
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "skip_iops_validation": true,
+    "format_cycles": 1,
+    "cycle_count": 1,
+    "secure_erase_option": [0, 1],
+    "run_definition": {
+      "filesystem_io": {
+        "template": "filesystem_template.job",
+        "args": {
+            "NAME": "fio_nvme",
+            "RW": "write",
+            "BLKSIZE": "4K",
+            "RUNTIME": "3m",
+            "DEPTH": 128,
+            "DO_VERIFY": 1,
+            "BUFFER_PATTERN": "0xA5"
+        }
+      }
+    }
+}

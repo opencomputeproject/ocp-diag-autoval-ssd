@@ -1,0 +1,33 @@
+{
+    "power_trigger": true,
+    "power_cycle": "warm",
+    "power_random_time": false,
+		"include_boot_drive": true,
+    "write_fio": {
+        "write": {
+            "template": "basic_write.fio",
+            "args": {
+                "BLKSIZE": "4k",
+                "DEPTH": 128,
+                "RUNTIME": "10m",
+                "SIZE": "100%",
+                "RW": "randwrite",
+                "VERIFY": "md5"
+            }
+        }
+    },
+    "read_fio": {
+        "read": {
+            "template": "basic_read.fio",
+            "args": {
+                "BLKSIZE": "4k",
+                "DEPTH": 128,
+                "RUNTIME": "10m",
+                "SIZE": "100%",
+                "RW": "randread",
+                "VERIFY": "md5"
+            }
+        }
+    }
+
+}

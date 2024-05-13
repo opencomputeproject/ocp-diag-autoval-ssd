@@ -1,0 +1,7 @@
+{
+    "cycle_count": 10,
+    "cycle_type": "graceful_30s_cycle",
+    "include_boot_drive": true,
+    "remote_fio": false,
+    "drive_type": "ssd"
+}

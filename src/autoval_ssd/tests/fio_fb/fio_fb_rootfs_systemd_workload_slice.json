@@ -1,0 +1,21 @@
+{
+    "prefix_command_name": "workload.slice",
+    "check_not_empty_test_drives": false,
+    "only_boot_drive": true,
+    "run_definition": {
+        "random": {
+            "template": "rootfs_template.job",
+						"files": {"file": "/root/havoc_fio_file"},
+            "args": {
+                "NAME": "fio_rootfs_test",
+                "RW": "randrw",
+                "BLKSIZE": "128k",
+                "SIZE": "60G",
+                "RUNTIME": "30m",
+                "DEPTH": 128,
+                "MIXWRITE": 50,
+                "MIXREAD": 50
+            }
+        }
+    }
+}

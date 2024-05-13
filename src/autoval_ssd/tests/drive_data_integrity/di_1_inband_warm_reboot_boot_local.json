@@ -1,0 +1,6 @@
+{
+    "cycle_count": 1,
+		"only_boot_drive": true,
+    "cycle_type": "reboot",
+    "remote_fio": false
+}

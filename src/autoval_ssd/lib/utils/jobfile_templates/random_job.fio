@@ -1,0 +1,15 @@
+[global]
+norandommap
+ioengine=libaio
+randrepeat=0
+direct=1
+size=100%
+iodepth=IODEPTH
+numjobs=NUM_JOBS
+group_reporting
+time_based
+refill_buffers
+runtime=RUNTIME
+rw=RW
+rwmixread=RWMIX
+bs=BLKSIZE

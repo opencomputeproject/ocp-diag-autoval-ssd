@@ -1,0 +1,9 @@
+[global]
+rw=RW
+direct=1
+size=SIZE
+bs=BLKSIZE
+iodepth=DEPTH
+loops=LOOPS
+group_reporting=1
+stonewall

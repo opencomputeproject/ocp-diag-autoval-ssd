@@ -1,0 +1,10 @@
+{
+    "nvme": {
+        "smart-log": {
+            "temperature": "<348",
+            "critical_warning": "==",
+            "avail_spare": ">80",
+            "media_errors": "=="
+        }
+    }
+}

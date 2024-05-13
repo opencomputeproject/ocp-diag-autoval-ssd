@@ -1,0 +1,10 @@
+[global]
+direct=1
+rw=write
+bs=128k
+iodepth=8
+ioengine=libaio
+numjobs=1
+size=100%
+name=precond_seq
+group_reporting=1

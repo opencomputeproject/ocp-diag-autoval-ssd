@@ -1,0 +1,20 @@
+{
+    "drive_type" : "ssd",
+    "cycle" : 3,
+    "expected_nuse_size": 2621440,
+    "nvme_format_timeout": 1200,
+    "run_definition": {
+        "write": {
+            "template": "basic_write.fio",
+            "args": {
+                "BLKSIZE": "256k",
+                "SIZE": "10GB",
+                "DEPTH": 32,
+                "RUNTIME": "3",
+                "VERIFY": "md5",
+                "DO_VERIFY": 0,
+                "RW": "write"
+            }
+        }
+    }
+}

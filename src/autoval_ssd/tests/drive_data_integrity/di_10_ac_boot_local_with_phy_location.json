@@ -1,0 +1,7 @@
+{
+    "cycle_count": 10,
+    "cycle_type": "ac",
+    "only_boot_drive": true,
+    "remote_fio": false,
+    "boot_drive_physical_location": "0000:64:00.0"
+}

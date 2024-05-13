@@ -1,0 +1,7 @@
+{
+    "cycle_count": 1,
+    "cycle_type": "warm",
+    "remote_fio": true,
+    "pre_condition":false,
+    "drive_type": "ssd"
+}

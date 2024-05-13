@@ -1,0 +1,14 @@
+{
+    "check_not_empty_test_drives": true,
+    "remove_partition":false,
+    "drive_type":"ssd",
+    "drive_interface":"nvme",
+    "run_definition": {
+        "random": {
+            "template": "ssd_health_counter.job",
+            "args": {
+                "SIZE": "10G"
+            }
+        }
+    }
+}

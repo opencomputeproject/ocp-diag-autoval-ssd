@@ -1,0 +1,46 @@
+{
+    "include_boot_drive": true,
+    "cycle_type_list": ["warm"],
+    "percent_write_size" : 10,
+    "write_fio": {
+        "ssd_md5": {
+            "template": "basic_write.fio",
+            "args": {
+                "NAME": "fio_raw_test",
+                "BLKSIZE": "128k",
+                "SIZE": "6G",
+                "DEPTH": 128,
+                "RUNTIME": "1h",
+                "VERIFY": "md5",
+                "RW": "randwrite"
+            }
+        }
+    },
+    "read_fio": {
+        "ssd_md5": {
+            "template": "basic_read.fio",
+            "args": {
+                "NAME": "fio_raw_test",
+                "BLKSIZE": "128k",
+                "SIZE": "6G",
+                "DEPTH": 128,
+                "RUNTIME": "1h",
+                "VERIFY": "md5",
+                "RW": "randread"
+            }
+        }
+    },
+    "verify_fio": {
+        "ssd_md5": {
+            "template": "basic_verify.fio",
+            "args": {
+                "NAME": "fio_raw_test",
+                "BLKSIZE": "128k",
+                "SIZE": "6G",
+                "DEPTH": 128,
+                "RW": "randread",
+                "VERIFY": "md5"
+            }
+        }
+    }
+}

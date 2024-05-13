@@ -1,0 +1,17 @@
+[global]
+rw=RW
+direct=1
+ioengine=libaio
+size=SIZE
+bs=BLKSIZE
+iodepth=DEPTH
+runtime=RUNTIME
+verify=VERIFY
+time_based
+do_verify=1
+verify_backlog=10000000
+verify_state_load=1
+verify_async=4
+group_reporting=1
+verify_fatal=1
+verify_dump=1

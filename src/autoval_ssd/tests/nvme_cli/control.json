@@ -1,0 +1,5 @@
+{
+  "drive_type": "ssd",
+  "drive_interface": "nvme",
+  "include_boot_drive": true
+}

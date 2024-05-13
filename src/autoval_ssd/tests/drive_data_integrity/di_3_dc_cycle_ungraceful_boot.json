@@ -1,0 +1,6 @@
+{
+    "cycle_count": 3,
+    "cycle_type": "warm",
+    "only_boot_drive": true,
+    "remote_fio": true
+}

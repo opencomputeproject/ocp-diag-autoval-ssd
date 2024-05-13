@@ -1,0 +1,53 @@
+{
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "nvme_flush": true,
+    "power_trigger": false,
+    "iteration_count": 3,
+    "workloads":{
+    "nvme_flush_write": {
+        "nvme_flush": {
+            "template": "basic_write.fio",
+            "filesystem": true,
+            "args": {
+                "BLKSIZE": "4k",
+                "SIZE": "100G",
+                "DEPTH": 128,
+                "RUNTIME": "1h",
+                "VERIFY": "md5",
+                "RW": "randwrite"
+            }
+        }
+    },
+    "nvme_flush_read": {
+        "nvme_flush": {
+            "template": "basic_read.fio",
+            "filesystem": true,
+            "skip_fs": true,
+            "args": {
+                "BLKSIZE": "4k",
+                "SIZE": "100G",
+                "DEPTH": 128,
+                "RUNTIME": "1h",
+                "VERIFY": "md5",
+                "RW": "randread"
+            }
+        }
+    },
+    "nvme_flush_verify": {
+        "nvme_flush": {
+            "template": "basic_verify.fio",
+            "filesystem": true,
+            "skip_fs": true,
+            "args": {
+                "RW": "randread",
+                "BLKSIZE": "4k",
+                "SIZE": "100G",
+                "RUNTIME": 0,
+                "DEPTH": "128",
+                "VERIFY": "md5"
+            }
+        }
+    }
+  }
+}

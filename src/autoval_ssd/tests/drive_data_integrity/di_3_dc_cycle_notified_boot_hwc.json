@@ -1,0 +1,7 @@
+{
+    "cycle_count": 3,
+    "cycle_type": "dc",
+    "only_boot_drive": true,
+    "oob_mode": "hwc",
+    "remote_fio": true
+}

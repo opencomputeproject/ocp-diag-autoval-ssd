@@ -1,0 +1,7 @@
+{
+    "cycle_count": 1,
+    "cycle_type": "reboot",
+    "remote_fio": true,
+    "include_boot_drive": true,
+    "drive_type": "ssd"
+}

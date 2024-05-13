@@ -1,0 +1,6 @@
+{
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "include_boot_drive": true,
+    "nvme_version": "nvme-cli-2.6-4.el9.x86_64"
+}

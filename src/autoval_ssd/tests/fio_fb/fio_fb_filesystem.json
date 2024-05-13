@@ -1,0 +1,18 @@
+{
+    "run_definition": {
+        "random": {
+            "template": "filesystem_template.job",
+            "filesystem": "True",
+            "args": {
+                "NAME": "fio_filesystem_test",
+                "RW": "randrw",
+                "BLKSIZE": "128k",
+                "SIZE": "10G",
+                "DEPTH": "128",
+                "RUNTIME": "1h",
+                "MIXWRITE":50,
+                "MIXREAD":50
+            }
+        }
+    }
+}

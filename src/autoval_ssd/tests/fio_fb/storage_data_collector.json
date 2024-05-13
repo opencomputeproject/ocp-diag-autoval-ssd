@@ -1,0 +1,14 @@
+{
+    "run_definition": {
+        "randrw": {
+            "template": "stress_fio.fio",
+            "args": {
+                "RUNTIME": "30m",
+                "BLKSIZE": "8k",
+                "SIZE": "100%",
+                "IODEPTH": "32"
+            }
+        }
+    },
+    "skip_iops_validation": true
+}

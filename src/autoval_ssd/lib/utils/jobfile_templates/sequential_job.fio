@@ -1,0 +1,11 @@
+[global]
+direct=1
+rw=RW
+bs=BLKSIZE
+iodepth=IODEPTH
+ioengine=libaio
+numjobs=NUM_JOBS
+runtime=RUNTIME
+time_based
+group_reporting
+name=NAME

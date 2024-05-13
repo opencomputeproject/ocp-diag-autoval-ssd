@@ -1,0 +1,6 @@
+{
+    "cycle_count": 10,
+    "cycle_type": "reboot",
+    "include_boot_drive": true,
+    "drive_type": "ssd"
+}

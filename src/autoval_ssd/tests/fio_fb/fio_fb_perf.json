@@ -1,0 +1,30 @@
+{
+    "trim_arg": {"BLKSIZE": "1G", "BLKALIGN": "1G"},
+    "run_definition": {
+        "sequential": {
+            "template": "sequential_job.fio",
+            "precondition_loops": 2,
+            "precondition_template": "sequential_precondition.fio",
+            "args": {
+                "RUNTIME": "1200s",
+                "RW": ["write", "read"],
+                "BLKSIZE": ["256k", "512k"],
+                "IODEPTH": ["1", "4", "8", "16"],
+                "NUM_JOBS": 1
+            }
+        },
+        "random": {
+            "template": "random_job.fio",
+            "precondition_loops": 2,
+            "precondition_template": "random_precondition.fio",
+            "args": {
+                "RUNTIME": "1200s",
+                "RWMIX": [0, 70, 100],
+                "BLKSIZE": ["256k", "512k"],
+                "IODEPTH": ["1", "4", "8", "16"],
+                "NUM_JOBS": ["1", "4", "8"],
+                "RW": "randrw"
+            }
+        }
+    }
+}

@@ -1,0 +1,51 @@
+{
+	"nvme_flush": false,
+	"power_trigger": true,
+	"iteration_count": 3,
+	"cycle_type": "warm",
+	"workloads": {
+		"nvme_flush_write": {
+			"nvme_flush": {
+				"template": "basic_write.fio",
+				"filesystem": true,
+				"args": {
+          "RW": "write",
+          "VERIFY": "md5",
+          "RUNTIME": "10m",
+					"BLKSIZE": "4k",
+					"SIZE": "100G",
+					"DEPTH": 128
+				}
+			}
+		},
+		"nvme_flush_read": {
+			"nvme_flush": {
+				"template": "basic_read.fio",
+				"filesystem": true,
+        "skip_fs": true,
+				"args": {
+          "RW": "read",
+          "VERIFY": "md5",
+          "RUNTIME": "10m",
+					"BLKSIZE": "4k",
+					"SIZE": "100G",
+					"DEPTH": 128
+				}
+			}
+		},
+		"nvme_flush_verify": {
+			"nvme_flush": {
+				"template": "basic_verify.fio",
+				"filesystem": true,
+        "skip_fs": true,
+				"args": {
+          "RW": "read",
+          "VERIFY": "md5",
+					"BLKSIZE": "4k",
+					"SIZE": "100G",
+					"DEPTH": 128
+				}
+			}
+		}
+	}
+}

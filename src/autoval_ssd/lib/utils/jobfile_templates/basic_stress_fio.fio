@@ -1,0 +1,16 @@
+[global]
+rw=randrw
+rwmixread=70
+size=SIZE
+blocksize=BLKSIZE
+blockalign=BLKSIZE
+iodepth=IODEPTH
+direct=1
+norandommap
+do_verify=1
+time_based
+ramp_time=5
+runtime=RUNTIME
+group_reporting=1
+numjobs=1
+ioengine=libaio

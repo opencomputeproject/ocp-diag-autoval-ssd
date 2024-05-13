@@ -1,0 +1,7 @@
+[global]
+rw=randtrim
+norandommap
+blocksize=BLKSIZE
+blockalign=BLKALIGN
+iodepth=256
+group_reporting=1

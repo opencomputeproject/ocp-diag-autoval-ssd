@@ -1,0 +1,6 @@
+{
+    "cycle_count": 10,
+    "cycle_type": "sled-cycle",
+    "remote_fio": false,
+    "drive_type": "ssd"
+}

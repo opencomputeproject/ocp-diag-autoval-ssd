@@ -1,0 +1,17 @@
+[global]
+norandommap
+ioengine=libaio
+randrepeat=0
+direct=1
+invalidate=1
+name=NAME
+iodepth=DEPTH
+group_reporting=1
+refill_buffers
+rw=RW
+bs=BLKSIZE
+runtime=RUNTIME
+time_based
+offset=0
+do_verify=DO_VERIFY
+buffer_pattern=BUFFER_PATTERN

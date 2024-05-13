@@ -1,0 +1,15 @@
+{
+    "drive_type": "ssd",
+    "run_definition": {
+        "randrw": {
+            "template": "stress_fio.fio",
+            "precondition_loops": 2,
+            "args": {
+                "RUNTIME": "2d",
+                "BLKSIZE": "8k",
+                "IODEPTH": 32,
+                "SIZE": "100%"
+            }
+        }
+    }
+}

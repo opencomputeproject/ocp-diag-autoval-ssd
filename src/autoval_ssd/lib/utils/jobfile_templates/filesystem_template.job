@@ -1,0 +1,16 @@
+[global]
+norandommap
+ioengine=libaio
+randrepeat=0
+direct=1
+invalidate=1
+name=NAME
+size=SIZE
+iodepth=DEPTH
+group_reporting=1
+refill_buffers
+rw=RW
+bs=BLKSIZE
+runtime=RUNTIME
+rwmixwrite=MIXWRITE
+rwmixread=MIXREAD

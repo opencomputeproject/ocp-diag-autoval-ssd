@@ -1,0 +1,25 @@
+{
+    "only_boot_drive": true,
+    "run_definition": {
+        "Write": {
+            "template": "boot_sert.job",
+            "args": {
+                "RW": "write",
+                "SIZE": "10G",
+                "BLKSIZE": "128k",
+                "DEPTH": 32,
+                "LOOPS": 50
+            }
+        },
+        "Read": {
+            "template": "boot_sert.job",
+            "args": {
+                "RW": "read",
+                "SIZE": "10G",
+                "BLKSIZE": "128k",
+                "DEPTH": 32,
+                "LOOPS": 50
+            }
+        }
+    }
+}

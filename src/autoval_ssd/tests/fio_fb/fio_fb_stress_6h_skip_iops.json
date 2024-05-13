@@ -1,0 +1,15 @@
+{
+    "run_definition": {
+        "randrw": {
+            "template": "stress_fio.fio",
+            "precondition_loops": 2,
+            "args": {
+                "RUNTIME": "6h",
+                "BLKSIZE": "8k",
+                "IODEPTH": 32,
+                "SIZE": "100%"
+            }
+        }
+    },
+    "skip_iops_validation": true
+}

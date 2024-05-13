@@ -1,0 +1,11 @@
+{
+  "test_drive_filter": true,
+  "drive_type": "ssd",
+  "dc_lm_validation": true,
+  "workload": ["USSDT_Workload_loop"],
+  "fio_synth_params":{
+    "synth_verify": true,
+    "ignore_error": true,
+    "parallel": true
+  }
+}

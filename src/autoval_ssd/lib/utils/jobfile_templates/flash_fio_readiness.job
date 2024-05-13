@@ -1,0 +1,17 @@
+[global]
+description=Facebook FIO Readiness test
+random_generator=lfsr
+time_based
+ramp_time=10
+runtime=RUNTIME
+direct=1
+iodepth=128
+numjobs=1
+name=8k
+rwmixread=60
+ioengine=libaio
+group_reporting=1
+verify=md5
+do_verify=0
+rw=randrw
+bs=8k

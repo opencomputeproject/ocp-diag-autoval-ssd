@@ -1,0 +1,24 @@
+{
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "sweep_param_key": "overprovisioning",
+    "sweep_param_unit": "percent",
+    "sweep_param_values": [10, 20, 28, 50],
+    "cycle_count": 1,
+    "skip_iops_validation": true,
+    "run_definition": {
+      "filesystem_io": {
+        "template": "filesystem_template.job",
+        "args": {
+            "NAME": "fio_nvme",
+            "RW": "write",
+            "BLKSIZE": "4K",
+            "SIZE": "10G",
+            "RUNTIME": 60,
+            "DEPTH": 128,
+            "MIXWRITE": 50,
+            "MIXREAD": 50
+        }
+      }
+    }
+}
