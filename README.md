@@ -8,26 +8,28 @@ At a high level, the following steps are necessary to install, build, and use au
 3. [Executing Tests](#executing-tests)
 
 ## Installation
-This installation steps are a work in progress.  They will be improved/simplified in the future.
+
+*This installation steps are a work in progress.  They will be improved/simplified in the future.*
+
 1. Clone the following repos:
-```
+```bash
 $ git clone https://github.com/opencomputeproject/ocp-diag-autoval.git
 $ git clone https://github.com/opencomputeproject/ocp-diag-autoval-ssd.git
 ```
 2. Create a virtual environment:
-```
+```bash
 $ python -m venv env
 $ source ./env/bin/activate
 $ pip install build
 ```
 3. Build and install `ocptv-autoval`
-```
+```bash
 $ cd ocp-diag-autoval
 $ python -m build
 $ pip install ./dist/ocptv_autoval-0.0.1.tar.gz
 ```
 4. Build and install `ocptv-autoval-ssd`
-```
+```bash
 $ cd ocp-diag-autoval-ssd
 $ python -m build
 $ mkdir -p ~/bin/ocp-diag-autoval-ssd/
@@ -44,17 +46,17 @@ Before running tests for the first time, you'll need to create a `site_settings.
 Here is an example with some basic defaults.
 ``` json
 {
-  "control_server_logdir": "/autoval/logs/",
-  "control_server_tmpdir": "/tmp/autoval/",
-  "dut_logdir": "/autoval/logs/",
-  "dut_tmpdir": "/tmp/autoval/",
-  "resultsdir": "/autoval/results/",
-  "ssh_key_path": ["/USERNAME/.ssh/id_rsa"], # Replace contents with a path to your public SSH key
-  "plugin_config_path" : "plugins/plugin_config.json",
-  "repository_dir": "/autoval/repository/",
-  "test_utils_plugin_config_path" : "plugins/test_utils_plugin_config.json",
-  "cleanup_dut_logdirs" : false,
-  "yum_repo": "autoval-tools"
+    "control_server_logdir": "/autoval/logs/",
+    "control_server_tmpdir": "/tmp/autoval/",
+    "dut_logdir": "/autoval/logs/",
+    "dut_tmpdir": "/tmp/autoval/",
+    "resultsdir": "/autoval/results/",
+    "ssh_key_path": ["/USERNAME/.ssh/id_rsa"], # Replace contents with a path to your public SSH key
+    "plugin_config_path" : "plugins/plugin_config.json",
+    "repository_dir": "/autoval/repository/",
+    "test_utils_plugin_config_path" : "plugins/test_utils_plugin_config.json",
+    "cleanup_dut_logdirs" : false,
+    "yum_repo": "autoval-tools"
 }
 ```
 
@@ -73,22 +75,21 @@ The `{-c|--config} CONFIG` autoval option is used to specify DUT configuration i
 Example:
 ```JSON
 {
-"hosts":
-  [
-   {
-    "hostname": "10::CD97:E10F:FE82:9A1C",
-    "username": "root",
-    "password": "password",
-    "oob_addr": "10::CD97:E10F:FE82:9A19",
-    "oob_username": "root",
-    "oob_password": "password"
-   }
-   ]
+    "hosts": [
+        {
+            "hostname": "10::CD97:E10F:FE82:9A1C",
+            "username": "root",
+            "password": "password",
+            "oob_addr": "10::CD97:E10F:FE82:9A19",
+            "oob_username": "root",
+            "oob_password": "password"
+        }
+    ]
 }
 ```
 ### Test Execution
-Now that you have a `hosts.json` file, you can run a test (e.g. `simple.test`) as follows.
-```
+Now that you have a `hosts.json` file, you can run a test as follows.
+```bash
 $ cd ~/bin/ocp-diag-autoval-ssd
 $ export PYTHONPATH=.
 $ env SITE_SETTINGS="$(cat path/to/site_settings.json)" \
