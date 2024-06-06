@@ -133,6 +133,7 @@ class FioRunner(TestUtilsBase):
         self.enable_performance_metrics_validation = args.get(
             "enable_performance_metrics_validation", False
         )
+        self.boot_drive_physical_location = args.get("boot_drive_physical_location", "")
         fio_timeout = args.get("fio_timeout", 86400)
         try:
             self.fio_timeout = int(fio_timeout)
@@ -733,7 +734,9 @@ class FioRunner(TestUtilsBase):
                 drives=self.drives,
             )
         if self.boot_drive is None:
-            self.boot_drive = DiskUtils.get_boot_drive(self.host)
+            self.boot_drive = DiskUtils.get_boot_drive(
+                self.host, self.boot_drive_physical_location
+            )
         by_model = StorageUtils.group_drive_by_attr("model", self.drives)
         write_iops = {}
         read_iops = {}

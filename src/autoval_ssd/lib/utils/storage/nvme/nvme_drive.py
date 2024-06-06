@@ -13,7 +13,7 @@ from typing import Dict, List
 from autoval.lib.host.component.component import COMPONENT
 
 from autoval.lib.utils.autoval_errors import ErrorType
-from autoval.lib.utils.autoval_exceptions import TestError
+from autoval.lib.utils.autoval_exceptions import AutovalFileNotFound, TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval.lib.utils.decorators import retry
@@ -136,9 +136,11 @@ class NVMeDrive(Drive):
         config = {}
         self.cfg_dir = self._get_config_dir(config_file)
         relative_cfg_file_path = os.path.join(self.cfg_dir, config_file)
-        relative_cfg_file_path = "/cfg/" + relative_cfg_file_path
+        relative_cfg_file_path = "cfg/" + relative_cfg_file_path
         content = GenericUtils.read_resource_cfg(
-            file_path=relative_cfg_file_path, module="autoval_ssd"
+            file_path=relative_cfg_file_path,
+            module="autoval_ssd",
+            autoval_oss_path=self.get_target_path(),
         )
         config.update(content["nvme"])
         self.get_smart_log_keys()
@@ -147,6 +149,22 @@ class NVMeDrive(Drive):
             key: config[key] for key in self.smart_log_keys if key in config
         }
         return validate_config
+
+    def get_target_path(self) -> str:
+    """
+    Returns the path of the target path which is used to get the cfg path in the autoval-oss
+    """
+    # Get the absolute path of the current file
+    target_path = ""
+    current_file_path = os.path.abspath(__file__)
+    try:
+        pattern = r"^(/.*?)/lib"
+        match = re.search(pattern, current_file_path)
+        if match:
+            target_path = match.group(1)
+    except Exception:
+        raise AutovalFileNotFound("The required file path is not found")
+    return target_path
 
     def _get_config_dir(self, ext_file) -> str:
         """
