@@ -232,9 +232,9 @@ class StorageTestBase(TestBase):
         if self.original_test_control_drives:
             drive_list = self.original_test_control_drives
         else:
-           drive_list = DiskUtils.get_block_devices(
+            drive_list = DiskUtils.get_block_devices(
                 self.host,
-                boot_drive_physical_location=self.boot_drive_physical_location,
+            boot_drive_physical_location=self.boot_drive_physical_location,
             )
 
         if boot_drive != "" and boot_drive != "rootfs":
