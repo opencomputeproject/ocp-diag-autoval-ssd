@@ -151,10 +151,10 @@ class NVMeDrive(Drive):
         return validate_config
 
     def get_target_path(self) -> str:
-    """
-    Returns the path of the target path which is used to get the cfg path in the autoval-oss
-    """
-    # Get the absolute path of the current file
+        """
+        Returns the path of the target path which is used to get the cfg path in the autoval-oss
+        Get the absolute path of the current file
+        """
         target_path = ""
         current_file_path = os.path.abspath(__file__)
         try:
