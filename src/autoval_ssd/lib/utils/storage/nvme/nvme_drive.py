@@ -155,16 +155,16 @@ class NVMeDrive(Drive):
     Returns the path of the target path which is used to get the cfg path in the autoval-oss
     """
     # Get the absolute path of the current file
-    target_path = ""
-    current_file_path = os.path.abspath(__file__)
-    try:
-        pattern = r"^(/.*?)/lib"
-        match = re.search(pattern, current_file_path)
-        if match:
-            target_path = match.group(1)
-    except Exception:
-        raise AutovalFileNotFound("The required file path is not found")
-    return target_path
+        target_path = ""
+        current_file_path = os.path.abspath(__file__)
+        try:
+            pattern = r"^(/.*?)/lib"
+            match = re.search(pattern, current_file_path)
+            if match:
+                target_path = match.group(1)
+        except Exception:
+            raise AutovalFileNotFound("The required file path is not found")
+        return target_path
 
     def _get_config_dir(self, ext_file) -> str:
         """
