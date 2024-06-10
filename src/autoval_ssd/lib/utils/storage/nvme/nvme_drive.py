@@ -32,6 +32,7 @@ from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
 DEFAULT_VALIDATE_CONFIG = "nvme_validate.json"
 
 
+
 def _strip_white_spaces_from_keys(mapping: dict) -> None:
     """
     Recursively remove white spaces from key names of a dictionary in place
@@ -136,18 +137,18 @@ class NVMeDrive(Drive):
         config = {}
         self.cfg_dir = self._get_config_dir(config_file)
         relative_cfg_file_path = os.path.join(self.cfg_dir, config_file)
-        relative_cfg_file_path = "cfg/" + relative_cfg_file_path
-        content = GenericUtils.read_resource_cfg(
-            file_path=relative_cfg_file_path,
-            module="autoval_ssd",
-            autoval_oss_path=self.get_target_path(),
-        )
+        relative_cfg_file_path = "/cfg/" + relative_cfg_file_path
+        abs_path = self.get_target_path()
+        nvme_cfg_path = abs_path + relative_cfg_file_path
+        AutovalLog.log_info(f"The file path for Nvme config {nvme_cfg_path}")
+        content = FileActions.read_data(nvme_cfg_path, json_file=True)
+        AutovalLog.log_info(f"Reading content {content} from cfg directory")
         config.update(content["nvme"])
         self.get_smart_log_keys()
         config = self._flatten_validate_config_dict(config)
         validate_config = {
-            key: config[key] for key in self.smart_log_keys if key in config
-        }
+                key: config[key] for key in self.smart_log_keys if key in config
+                }
         return validate_config
 
     def get_target_path(self) -> str:
