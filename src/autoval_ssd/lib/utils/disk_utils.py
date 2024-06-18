@@ -15,7 +15,6 @@ from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
-from autoval.lib.utils.golden_config_check import GoldenConfigCheck
 
 from autoval_ssd.lib.utils.filesystem_utils import FilesystemUtils
 from autoval_ssd.lib.utils.sg_utils import SgUtils
@@ -243,7 +242,7 @@ class DiskUtils:
         return devices
 
     @staticmethod
-    def get_block_devices(host, exclude_boot_drive: bool = True):
+    def get_block_devices(host, exclude_boot_drive: bool = True, boot_drive_physical_location: str = ""):
         """
         Return a list of block devices on the system
         @return String[]: e.g. [sda, sdb, sdc ...]
@@ -254,7 +253,12 @@ class DiskUtils:
         if not drives:
             raise TestError("Not able to match block devices from lsblk output")
         if exclude_boot_drive:
-            boot_drive = DiskUtils.get_boot_drive(host)
+            if boot_drive_physical_location:
+                boot_drive: str = DiskUtils.get_block_from_physical_location(
+                    host,[boot_drive_physical_location],
+                    DiskUtils.get_block_devices_info(host))
+            else:
+                boot_drive = DiskUtils.get_boot_drive(host)
             if boot_drive:
                 drives.remove(boot_drive)
         return drives
@@ -343,7 +347,7 @@ class DiskUtils:
         return False
 
     @staticmethod
-    def get_boot_drive(host) -> str:
+    def get_boot_drive(host, boot_drive_physical_location: str = "") -> str:
         """
         This method will return the boot drive in the host
         @param Host host : Host Object
@@ -382,10 +386,9 @@ class DiskUtils:
                     return boot_drive
         # If the boot drive is not mounted or doesn't have boot-sectors.
         # Filtering the boot drive based on the BOM file
-        physical_location = GoldenConfigCheck().get_boot_drive_from_golden_config(host)
-        if physical_location:
+        if boot_drive_physical_location:
             boot_drive = DiskUtils.get_block_from_physical_location(
-                host, physical_location, lsblk["blockdevices"]
+                host, [boot_drive_physical_location], lsblk["blockdevices"]
             )
         return boot_drive
 
