@@ -27,6 +27,6 @@ Test Description
         validate capacity
   **
 
-Common Objective of drive_data_integrity test
+Common Objective of Nvme_cli test
 ---------------------------------------------
 Verify that a DUT with SSD NVMe can support the NVMe Spec commands.
