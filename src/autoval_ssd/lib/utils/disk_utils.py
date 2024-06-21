@@ -11,7 +11,7 @@ from autoval.lib.host.component.component import COMPONENT
 
 from autoval.lib.host.host import Host
 from autoval.lib.utils.autoval_errors import ErrorType
-from autoval.lib.utils.autoval_exceptions import TestError
+from autoval.lib.utils.autoval_exceptions import TestError, TestInputError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
@@ -253,14 +253,25 @@ class DiskUtils:
         if not drives:
             raise TestError("Not able to match block devices from lsblk output")
         if exclude_boot_drive:
+            USAGE = (
+                "Please provide the boot drive physical location in the specified format.\n"
+                "Format :<PCI domain>:<bus>:<device>.<function>\n"
+                "Example: 0000:64:00.0"
+            )
             if boot_drive_physical_location:
                 boot_drive: str = DiskUtils.get_block_from_physical_location(
                     host,[boot_drive_physical_location],
-                    DiskUtils.get_block_devices_info(host))
+                    DiskUtils.get_block_devices_info(host),
+                )
+                if not boot_drive:
+                    raise TestInputError(
+                        f"Provided physical location does not map to a block device.\n{USAGE}"
+                    )
             else:
                 boot_drive = DiskUtils.get_boot_drive(host)
-            if boot_drive:
-                drives.remove(boot_drive)
+                if not boot_drive:
+                    raise TestInputError(f"Could not detect boot drive.\n{USAGE}")
+            drives.remove(boot_drive)
         return drives
 
     @staticmethod
