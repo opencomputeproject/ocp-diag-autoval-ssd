@@ -1,5 +1,6 @@
 {
   "drive_type": "ssd",
   "drive_interface": "nvme",
-  "include_boot_drive": true
+  "include_boot_drive": true,
+  "boot_drive_physical_location": "0000:01:00.0"
 }
