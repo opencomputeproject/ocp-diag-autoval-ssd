@@ -87,6 +87,16 @@ Example:
     ]
 }
 ```
+### Update control.json file with boot drive physical location
+Every test has its control parameters updated in the control.json file and the boot_drive_physical_location
+should be passed as a test control parameter in string format as below
+
+```
+String boot_drive_physical_location: if provided, will use this location to find out the boot drive.
+Format:  <PCI domain>:<bus>:<device>.<function>
+Example: 0000:64:00.0
+```
+
 ### Test Execution
 Now that you have a `hosts.json` file, you can run a test as follows.
 ```bash
