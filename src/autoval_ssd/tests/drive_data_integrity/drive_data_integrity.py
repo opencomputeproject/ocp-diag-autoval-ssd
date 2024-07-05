@@ -16,7 +16,8 @@ from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
-from autoval.lib.utils.file_actions import FileActions
+from autoval.lib.utils.file_actions import FileActions	
+from autoval.lib.utils.site_utils import SiteUtils
 from autoval_ssd.lib.utils.disk_utils import DiskUtils
 from autoval_ssd.lib.utils.fio_runner import FioRunner
 from autoval_ssd.lib.utils.md_utils import MDUtils
@@ -112,6 +113,8 @@ class DriveDataIntegrityTest(StorageTestBase):
         self.trigger_timeout = 60
         self.status_interval = self.test_control.get("status_interval", 1)
         self.stop_fio_process_check = False
+        self.control_server_logs = SiteUtils.get_control_server_logdir()
+        self.fiolog_server_dir = None
 
     def setup(self, *args, **kwargs) -> None:
         """Prerequisite for drive data integrity test.
@@ -148,7 +151,10 @@ class DriveDataIntegrityTest(StorageTestBase):
                     error_type=ErrorType.TEST_TOPOLOGY_ERR,
                 )
         self.check_supported_fio_version()
-        self._get_log_dir()
+        if self.remote_fio:
+            self._get_server_log_dir()
+        else:
+            self._get_log_dir()
         self.ip4 = self._is_hostname_ip4()
         self.ipv6 = self.get_ipv6_addr()
         self.power_cmd = self._fio_trigger_cmd()
@@ -182,6 +188,16 @@ class DriveDataIntegrityTest(StorageTestBase):
         )
         if not FileActions.exists(self.fiolog_dir, self.host):
             FileActions.mkdirs(self.fiolog_dir, self.host)
+    
+    def _get_server_log_dir(self) -> None:
+        """
+        This method sets up the directory for storing FIO log files on the control server.
+        It creates a directory named `fio_results` in the `control_server_logs` directory
+        if it does not already exist.
+        """
+        self.fiolog_server_dir = os.path.join(self.control_server_logs, "fio_results")
+        if not FileActions.exists(self.fiolog_server_dir, self.host.localhost):
+            FileActions.mkdirs(self.fiolog_server_dir, self.host.localhost)
 
     def execute(self) -> None:
         """Executes FIO jobs on the given hosts.
@@ -547,12 +563,18 @@ class DriveDataIntegrityTest(StorageTestBase):
         power_trigger : Boolean
             If True fio will run with trigger. Here the default value is False.
         """
-        fio_output_file = self.fiolog_dir + "/fio-cycle_%s_%s.log" % (cycle, name)
         di_job = self.create_fio_job(job_args, test_drives, name, cycle)
         if self.remote_fio:
+            fio_output_file = (
+                f"{self.fiolog_server_dir}/fio-cycle_{cycle}_{name}.log".format(
+                    cycle, name
+                )
+            )
             self._run_fio_remote(di_job, fio_output_file, power_trigger=power_trigger)
         else:
-            self._run_fio_local(di_job, fio_output_file, power_trigger=power_trigger)
+            fio_output_file = (
+                f"{self.fiolog_dir}/fio-cycle_{cycle}_{name}.log".format(cycle, name)
+            )
 
     def _run_fio_cmd(self, cmd: str, timeout: int, power_trigger: bool) -> None:
         """
@@ -672,7 +694,7 @@ class DriveDataIntegrityTest(StorageTestBase):
             )
         ret = self.host.localhost.run_get_result(
             cmd=cmd,
-            working_directory=self.fiolog_dir,
+            working_directory=self.fiolog_server_dir,
         )
         if ret.return_code != 0:
             self.parse_fio_error(ret.return_code, ret.stdout, fio_output_file)
@@ -841,14 +863,15 @@ class DriveDataIntegrityTest(StorageTestBase):
                 if self.is_trim_needed(name, device):
                     dev_str = self.create_job_content(dev_str, device, idx, job="trim")
                     idx += 1
-        job_file = os.path.join(self.fiolog_dir, filename)
         if self.remote_fio:
+            job_file = os.path.join(self.fiolog_server_dir, filename)
             FileActions.write_data(job_file, dev_str)
         else:
             # if trigger timeout chosen less than 60sec, then written fio job file data
             # will be unavailable post cycle cmd. Hence, either delay needed to write the
             # data from cache to drive or sync cmd need to execute. Here, I am using sync
             # command in FileActions module write_data method.
+            job_file = os.path.join(self.fiolog_dir, filename)
             FileActions.write_data(job_file, dev_str, host=self.host, sync=True)
         return job_file
 
