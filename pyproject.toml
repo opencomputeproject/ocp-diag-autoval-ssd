@@ -32,5 +32,4 @@ publish = ["build", "twine"]
 "Source" = "https://github.com/opencomputeproject/ocp-diag-autoval-ssd"
 
 [tool.setuptools.package-data]
-"*" = ["*.json"]
-
+"*" = ["*.json", "*.fio"]
