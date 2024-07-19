@@ -447,10 +447,8 @@ class FioRunner(TestUtilsBase):
             replace = {}
         if not files and not drives:
             drives = self.get_drives(drive_type, drive_interface, drives)
-        templ_path = FileActions.get_resource_file_path(
-            os.path.join(LIB_PATH, templ_filename), "autoval_ssd"
-        )
-        content = FileActions.read_data(templ_path)
+        templ_file = os.path.join(self.get_jobfile_templates_path(), templ_filename)
+        content = FileActions.read_data(templ_file)
         _size = ""
         for key, value in replace.items():
             regex = re.compile(f"={key}", re.MULTILINE)
@@ -529,6 +527,29 @@ class FioRunner(TestUtilsBase):
             self.host.put_file(job_file, dest_job_file)
         AutovalLog.log_info("Job file used: %s" % dest_job_file)
         return dest_job_file
+        
+    def get_jobfile_templates_path(self) -> str:
+        """
+        Return path to the jobfile_templates/ directory.
+
+        Returns:
+            The path to the jobfile_templates/ directory.
+
+        Raises:
+            TestError: jobfile_templates/ directory can't be detected because the current
+            file is not located in a path with a lib/ subdirectory.
+        """
+        current_file_path = os.path.abspath(__file__)
+        pattern = r"^(/.*?/lib)"
+        match = re.search(pattern, current_file_path)
+        if not match:
+            raise TestError(
+                "Unable to determine path to fio jobfile_templates directory.\n"
+                f"Directory 'lib/' missing from path '{current_file_path}' of current file '{__file__}'.\n"
+                "This is likely caused by an AutoVal build or packaging issue."
+            )
+        lib_path = match.group(1)
+        return os.path.join(lib_path, "utils/jobfile_templates")
 
     def _create_file(self, device: str, _file: str, _size: str):
         """
