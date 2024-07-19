@@ -566,14 +566,14 @@ class DriveDataIntegrityTest(StorageTestBase):
         di_job = self.create_fio_job(job_args, test_drives, name, cycle)
         if self.remote_fio:
             fio_output_file = (
-                f"{self.fiolog_server_dir} +/fio-cycle_{cycle}_{name}.log".format(
+                f"{self.fiolog_server_dir}/fio-cycle_{cycle}_{name}.log".format(
                     cycle, name
                 )
             )
             self._run_fio_remote(di_job, fio_output_file, power_trigger=power_trigger)
         else:
             fio_output_file = (
-                f"{self.fiolog_dir} +/fio-cycle_{cycle}_{name}.log".format(cycle, name)
+                f"{self.fiolog_dir}/fio-cycle_{cycle}_{name}.log".format(cycle, name)
             )
 
     def _run_fio_cmd(self, cmd: str, timeout: int, power_trigger: bool) -> None:
