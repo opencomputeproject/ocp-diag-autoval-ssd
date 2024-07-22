@@ -575,6 +575,7 @@ class DriveDataIntegrityTest(StorageTestBase):
             fio_output_file = (
                 f"{self.fiolog_dir}/fio-cycle_{cycle}_{name}.log".format(cycle, name)
             )
+            self._run_fio_local(di_job, fio_output_file, power_trigger=power_trigger)
 
     def _run_fio_cmd(self, cmd: str, timeout: int, power_trigger: bool) -> None:
         """
