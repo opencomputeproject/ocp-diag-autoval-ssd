@@ -51,13 +51,24 @@ mkdir -p /shared/autoval/pkgs/
 Download and copy RPMs into the repository directory based on test requirements.  We recommend the following (at a minimum):
 
 * ``smartmontools``
-* ``fb-FioSynthFlash``
+* ``fiosynth``
 * ``fio-engine-libaio``
 * ``fio``
 * ``hdparm``
 * ``libaio``
 * ``nvme-cli``
 * ``sdparm``
+
+#### Generate `fiosynth` rpm from source
+The following instructions can be used to build FioSynthFlash rpm from source (it is not generally pre-packaged as part linux OS distributions):
+
+```bash
+git clone https://github.com/facebookincubator/FioSynth
+cd FioSynth/
+sudo python3 setup.py bdist_rpm
+cd dist/
+```
+After the rpm is successfully built, you can upload it from the current directory to the RPM repository.
 
 > [!NOTE]
 > Specific versions of RPMs (e.g. ``fio`` or ``nvme-cli`` may be needed for specific tests or types of testing).

@@ -43,29 +43,29 @@ class FioSynthFlashUtils:
 
     @staticmethod
     def tool_setup(host) -> None:
-        AutovalLog.log_info("Installing fb-FioSynthFlash")
-        SystemUtils.install_rpms(host, ["fb-FioSynthFlash"])
+        AutovalLog.log_info("Installing fiosynth")
+        SystemUtils.install_rpms(host, ["fiosynth"])
         FioSynthFlashUtils.get_version(host)
 
     @staticmethod
     def get_version(host) -> None:
-        out = host.run("fb-FioSynthFlash -v")
+        out = host.run("fiosynth -v")
         pattern = r"\d+\.\d+\.*\d*"
         match = re.search(pattern, out)
         if match:
             version = match.group(0)
-            AutovalLog.log_info("+++Running fb-FioSynthFlash version: %s" % version)
+            AutovalLog.log_info("+++Running fiosynth version: %s" % version)
         else:
-            AutovalLog.log_info("fb-FioSynthFlash version not detected: Reinstalling")
-            SystemUtils.install_rpms(host, ["fb-FioSynthFlash"], force_install=True)
-            out = host.run("fb-FioSynthFlash -v")
+            AutovalLog.log_info("fiosynth version not detected: Reinstalling")
+            SystemUtils.install_rpms(host, ["fiosynth"], force_install=True)
+            out = host.run("fiosynth -v")
             match2 = re.search(pattern, out)
             if match2:
                 version = match2.group(0)
-                AutovalLog.log_info("+++Running fb-FioSynthFlash version: %s" % version)
+                AutovalLog.log_info("+++Running fiosynth version: %s" % version)
             else:
                 raise TestError(
-                    "fb-FioSynthFlash version not detected: %s" % out,
+                    "fiosynth version not detected: %s" % out,
                     component=COMPONENT.STORAGE_DRIVE,
                     error_type=ErrorType.TOOL_ERR,
                 )
@@ -208,7 +208,7 @@ class FioSynthFlashUtils:
                 error_type=ErrorType.INPUT_ERR,
             )
         AutovalLog.log_info("[FioSynthFlash Log] Starting fioSynthFlash.")
-        cmd = "fb-FioSynthFlash -x -w %s" % workload
+        cmd = "fiosynth -x -w %s" % workload
         if raid:
             AutovalLog.log_info("[FioSynthFlash Log] Running in ALLRAID.")
             results_file = workload + "_raid_results"
