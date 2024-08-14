@@ -224,7 +224,7 @@ class FioSynthFlash(StorageTestBase):
         StorageUtils.change_nvme_io_timeout(
             host=self.host, test_phase="setup()", new_timeout=8
         )
-        self.storage_test_tools.extend(["fb-FioSynthFlash"])
+        self.storage_test_tools.extend(["fiosynth"])
         super().setup(*args, **kwargs)
         self.synth_result_dir = FioSynthFlashUtils.setup_synth_resultdir(
             self.host, self.dut_logdir[self.host.hostname]
