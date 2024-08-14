@@ -18,7 +18,7 @@ from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval.lib.utils.file_actions import FileActions
-from autoval.lib.utils.generic_utils import GenericUtils
+from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 from autoval_ssd.lib.utils.system_utils import SystemUtils
 
 
@@ -392,11 +392,8 @@ class FioSynthFlashUtils:
                 if drive.is_ocp_2_6_drive():
                     filename = "Workload_Loop_Targets_OCP2.6.json"
                     break
-        cfg_dir = "cfg"
-        relative_cfg_file_path = os.path.join(cfg_dir, filename)
-        benchmark_dict = GenericUtils.read_resource_cfg(
-            file_path=relative_cfg_file_path, module="autoval_ssd"
-        )
+        nvme_cfg_path = os.path.join(NVMeDrive.get_target_path(), "cfg", filename)
+        benchmark_dict = FileActions.read_data(nvme_cfg_path, json_file=True)
         csv_files = ""
         fio_results_dir = FioSynthFlashUtils.find_file_paths(
             host, results_dir, file_extension=""

@@ -148,7 +148,8 @@ class NVMeDrive(Drive):
         }
         return validate_config
 
-    def get_target_path(self) -> str:
+    @staticmethod
+    def get_target_path() -> str:
         """
         Returns the path of the target path which is used to get the cfg path in the autoval-oss
         """
