@@ -11,5 +11,6 @@ time_based
 refill_buffers
 runtime=RUNTIME
 rw=RW
-rwmixread=RWMIX
+rwmixread=MIXREAD
+rwmixwrite=MIXWRITE
 bs=BLKSIZE

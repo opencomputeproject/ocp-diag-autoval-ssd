@@ -19,7 +19,8 @@
             "precondition_template": "random_precondition.fio",
             "args": {
                 "RUNTIME": "1200s",
-                "RWMIX": [0, 70, 100],
+                "MIXREAD": 70,
+                "MIXWRITE": 30,
                 "BLKSIZE": ["256k", "512k"],
                 "IODEPTH": ["1", "4", "8", "16"],
                 "NUM_JOBS": ["1", "4", "8"],
