@@ -1,0 +1,108 @@
+NVME Identify Controller:
+vid     : 0x1344
+ssvid   : 0x1344
+sn      :         1921220DDF47
+mn      : MTFDHBA256TCK-1AS15ABYY
+fr      : P1MU002
+rab     : 0
+ieee    : 00a075
+cmic    : 0
+  [2:2] : 0     PCI
+  [1:1] : 0     Single Controller
+  [0:0] : 0     Single Port
+
+mdts    : 7
+cntlid  : 0
+ver     : 10201
+rtd3r   : 1e8480
+rtd3e   : 1e8480
+oaes    : 0
+  [8:8] : 0     Namespace Attribute Changed Event Not Supported
+
+oacs    : 0x17
+ [15:4] : 0x1   Reserved
+  [3:3] : 0     NS Management and Attachment Not Supported
+  [2:2] : 0x1   FW Commit and Download Supported
+  [1:1] : 0x1   Format NVM Supported
+  [0:0] : 0x1   Sec. Send and Receive Supported
+
+acl     : 3
+aerl    : 7
+frmw    : 0x2
+  [4:4] : 0     Firmware Activate Without Reset Not Supported
+  [3:1] : 0x1   Number of Firmware Slots
+  [0:0] : 0     Firmware Slot 1 Read/Write
+
+lpa     : 0x3
+  [1:1] : 0x1   Command Effects Log Page Supported
+  [0:0] : 0x1   SMART/Health Log Page per NS Supported
+
+elpe    : 255
+npss    : 4
+avscc   : 0x1
+  [0:0] : 0x1   Admin Vendor Specific Commands uses NVMe Format
+
+apsta   : 0x1
+  [0:0] : 0x1   Autonomous Power State Transitions Supported
+
+wctemp  : 355
+cctemp  : 358
+mtfa    : 0
+hmpre   : 0
+hmmin   : 0
+tnvmcap : 0
+unvmcap : 0
+rpmbs   : 0
+ [31:24]: 0     Access Size
+ [23:16]: 0     Total Size
+  [5:3] : 0     Authentication Method
+  [2:0] : 0     Number of RPMB Units
+
+sqes    : 0x66
+  [7:4] : 0x6   Max SQ Entry Size (64)
+  [3:0] : 0x6   Min SQ Entry Size (64)
+
+cqes    : 0x44
+  [7:4] : 0x4   Max CQ Entry Size (16)
+  [3:0] : 0x4   Min CQ Entry Size (16)
+
+nn      : 1
+oncs    : 0x17
+  [5:5] : 0     Reservations Not Supported
+  [4:4] : 0x1   Save and Select Supported
+  [3:3] : 0     Write Zeroes Not Supported
+  [2:2] : 0x1   Data Set Management Supported
+  [1:1] : 0x1   Write Uncorrectable Supported
+  [0:0] : 0x1   Compare Supported
+
+fuses   : 0
+  [0:0] : 0     Fused Compare and Write Not Supported
+
+fna     : 0x7
+  [2:2] : 0x1   Crypto Erase Supported as part of Secure Erase
+  [1:1] : 0x1   Crypto Erase Applies to All Namespace(s)
+  [0:0] : 0x1   Format Applies to All Namespace(s)
+
+vwc     : 0x1
+  [0:0] : 0x1   Volatile Write Cache Present
+
+awun    : 7
+awupf   : 0
+nvscc   : 1
+  [0:0] : 0x1   NVM Vendor Specific Commands uses NVMe Format
+
+acwu    : 0
+sgls    : 0
+  [0:0] : 0     Scatter-Gather Lists Not Supported
+
+subnqn  : nqn.2014-08.org.nvmexpress:13441344        1921220DDF47MTFDHBA256TCK-1AS15ABYY
+ps    0 : mp:8.25W operational enlat:0 exlat:0 rrt:0 rrl:0
+          rwt:0 rwl:0 idle_power:- active_power:-
+ps    1 : mp:2.40W operational enlat:0 exlat:0 rrt:1 rrl:1
+          rwt:1 rwl:1 idle_power:- active_power:-
+ps    2 : mp:1.90W operational enlat:0 exlat:0 rrt:2 rrl:2
+          rwt:2 rwl:2 idle_power:- active_power:-
+ps    3 : mp:0.0800W non-operational enlat:10000 exlat:2500 rrt:3 rrl:3
+          rwt:3 rwl:3 idle_power:- active_power:-
+ps    4 : mp:0.0050W non-operational enlat:5000 exlat:44000 rrt:4 rrl:4
+          rwt:4 rwl:4 idle_power:- active_power:-

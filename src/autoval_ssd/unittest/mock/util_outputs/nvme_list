@@ -1,0 +1,9 @@
+Node             SN                   Model                                    Namespace Usage                      Format           FW Rev
+---------------- -------------------- ---------------------------------------- --------- -------------------------- ---------------- --------
+/dev/nvme0n1     MN95N637910306E2I    HFS256GD9TNG-62A0A                       1          43.48  GB / 256.06  GB      4 KiB +  0 B   80003E00
+/dev/nvme1n1     S41RNE0M604408       MZ1LB1T9HALS-000FB               1          54.46  GB /   1.88  TB      4 KiB +  0 B   EDA74F2Q
+/dev/nvme2n1     S41RNE0M604462       MZ1LB1T9HALS-000FB               1          50.58  GB /   1.88  TB      4 KiB +  0 B   EDA74F2Q
+/dev/nvme3n1     S41RNE0M604434       MZ1LB1T9HALS-000FB               1          55.63  GB /   1.88  TB      4 KiB +  0 B   EDA74F2Q
+/dev/nvme4n1     S41RNE0M604437       MZ1LB1T9HALS-000FB               1          55.01  GB /   1.88  TB      4 KiB +  0 B   EDA74F2Q
+/dev/nvme5n1     S41RNE0M604466       MZ1LB1T9HALS-000FB               1          51.69  GB /   1.88  TB      4 KiB +  0 B   EDA74F2Q
+/dev/nvme6n1     S41RNE0M604448       MZ1LB1T9HALS-000FB               1          53.69  GB /   1.88  TB      4 KiB +  0 B   EDA74F2Q

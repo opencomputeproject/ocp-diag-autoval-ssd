@@ -1,0 +1,11 @@
+
+{
+  "hosts": [
+       {
+       "hostname" : "using.fake.host",
+       "ipv6":  "abcd:db00:0012:700e:face:0000:0023:0000",
+       "oob_addr" : "using-oob.fake.host",
+       "rack_sub_position_slot" : 1
+       }
+  ]
+}

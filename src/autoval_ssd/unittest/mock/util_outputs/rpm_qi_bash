@@ -1,0 +1,21 @@
+Name        : bash
+Version     : 5.0.11
+Release     : 1.fb2.el8
+Architecture: x86_64
+Install Date: Thu 22 Feb 2024 05:47:30 AM PST
+Group       : Unspecified
+Size        : 8082748
+License     : GPLv3+
+Signature   : RSA/SHA256, Mon 19 Apr 2021 11:34:25 AM PDT, Key ID 11120f4714e56dc8
+Source RPM  : bash-5.0.11-1.fb2.el8.src.rpm
+Build Date  : Mon 19 Apr 2021 11:34:15 AM PDT
+Build Host  : autoval.oss.host.com
+Relocations : (not relocatable)
+Packager    : ssh_infra
+URL         : https://www.gnu.org/software/bash
+Summary     : The GNU Bourne Again shell
+Description :
+The GNU Bourne Again shell (Bash) is a shell or command language
+interpreter that is compatible with the Bourne shell (sh). Bash
+incorporates useful features from the Korn shell (ksh) and the C shell
+(csh). Most sh scripts can be run by bash without modification.

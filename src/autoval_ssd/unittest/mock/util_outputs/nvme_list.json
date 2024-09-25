@@ -1,0 +1,16 @@
+{
+    "Devices": [
+        {
+            "DevicePath": "/dev/nvme0n1",
+            "Firmware": "X123",
+            "Index": 0,
+            "ModelNumber": "Unknown",
+            "ProductName": "Unknown device",
+            "SerialNumber": "Sxxxxx",
+            "UsedBytes": 366898667520,
+            "MaximumLBA": 125026902,
+            "PhysicalSize": 512110190592,
+            "SectorSize": 4096
+        }
+    ]
+}

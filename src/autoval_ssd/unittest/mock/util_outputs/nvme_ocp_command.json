@@ -1,0 +1,36 @@
+{
+    "Physical media units written" : {
+      "hi" : 0,
+      "lo" : 39074645999616
+    },
+    "Physical media units read" : {
+      "hi" : 0,
+      "lo" : 36265469677568
+    },
+    "Bad user nand blocks - Raw" : 0,
+    "Bad user nand blocks - Normalized" : 100,
+    "Bad system nand blocks - Raw" : 0,
+    "Bad system nand blocks - Normalized" : 100,
+    "XOR recovery count" : 0,
+    "Uncorrectable read error count" : 0,
+    "Soft ecc error count" : 1117,
+    "End to end corrected errors" : 0,
+    "End to end detected errors" : 0,
+    "System data percent used" : 0,
+    "Refresh counts" : 520628,
+    "Max User data erase counts" : 45,
+    "Min User data erase counts" : 16,
+    "Number of Thermal throttling events" : 0,
+    "Current throttling status" : 0,
+    "PCIe correctable error count" : 0,
+    "Incomplete shutdowns" : 0,
+    "Percent free blocks" : 1,
+    "Capacitor health" : 100,
+    "Unaligned I/O" : 0,
+    "Security Version Number" : 65537,
+    "NUSE - Namespace utilization" : 0,
+    "PLP start count" : 287,
+    "Endurance estimate" : 20100000,
+    "Log page version" : 2,
+    "Log page GUID" : "0xafd514c97c6f4f9ca4f2bfea2810afc5"
+  }

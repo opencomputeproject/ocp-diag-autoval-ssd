@@ -1,0 +1,45 @@
+NAME    TYPE ROTA   SIZE MODEL                                    MOUNTPOINT
+loop0   loop    1   100G                                          /var/oss/autoval/agent/control
+sda     disk    0 238.5G Vendor_1100_MTFD
+sda1    part    0   243M                                          /boot/efi
+sda2    part    0   488M                                          /boot
+sda3    part    0   1.9G                                          [SWAP]
+sda4    part    0 235.9G                                          /
+sdb     disk    1  12.8T WUH721414AL4204
+sdc     disk    1  12.8T WUH721414AL4204
+sdd     disk    1  12.8T WUH721414AL4204
+sde     disk    1  12.8T WUH721414AL4204
+sdf     disk    1  12.8T WUH721414AL4204
+sdg     disk    1  12.8T WUH721414AL4204
+sdh     disk    1  12.8T WUH721414AL4204
+sdi     disk    1  12.8T WUH721414AL4204
+sdj     disk    1  12.8T WUH721414AL4204
+sdk     disk    1  12.8T WUH721414AL4204
+sdl     disk    1  12.8T WUH721414AL4204
+sdm     disk    1  12.8T WUH721414AL4204
+sdn     disk    1  12.8T WUH721414AL4204
+sdo     disk    1  12.8T WUH721414AL4204
+sdp     disk    1  12.8T WUH721414AL4204
+sdq     disk    1  12.8T WUH721414AL4204
+sdr     disk    1  12.8T WUH721414AL4204
+sds     disk    1  12.8T WUH721414AL4204
+sdt     disk    1  12.8T WUH721414AL4204
+sdu     disk    1  12.8T WUH721414AL4204
+sdv     disk    1  12.8T WUH721414AL4204
+sdw     disk    1  12.8T WUH721414AL4204
+sdx     disk    1  12.8T WUH721414AL4204
+sdy     disk    1  12.8T WUH721414AL4204
+sdz     disk    1  12.8T WUH721414AL4204
+sdaa    disk    1  12.8T WUH721414AL4204
+sdab    disk    1  12.8T WUH721414AL4204
+sdac    disk    1  12.8T WUH721414AL4204
+sdad    disk    1  12.8T WUH721414AL4204
+sdae    disk    1  12.8T WUH721414AL4204
+sdaf    disk    1  12.8T WUH721414AL4204
+sdag    disk    1  12.8T WUH721414AL4204
+sdah    disk    1  12.8T WUH721414AL4204
+sdai    disk    1  12.8T WUH721414AL4204
+sdaj    disk    1  12.8T WUH721414AL4204
+sdak    disk    1  12.8T WUH721414AL4204
+nvme1n1 disk    0 838.4G Vendor MZ1LB960HAJQ-000
+nvme0n1 disk    0 838.4G Vendor MZ1LB960HAJQ-000

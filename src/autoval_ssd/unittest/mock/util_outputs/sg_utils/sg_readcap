@@ -1,0 +1,5 @@
+Read Capacity results:
+   Last logical block address=487325695 (0x1d0bffff), Number of blocks=487325696
+   Logical block length=512 bytes
+Hence:
+   Device size: 249510756352 bytes, 237952.0 MiB, 249.51 GB
