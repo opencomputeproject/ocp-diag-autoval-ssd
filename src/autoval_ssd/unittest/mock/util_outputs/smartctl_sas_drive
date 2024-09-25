@@ -1,0 +1,103 @@
+smartctl 6.5 2016-05-07 r4318 [x86_64-linux-4.11.3-67_fbk17_4093_g2bf19e7a0b95] (local build)
+Copyright (C) 2002-16, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Vendor:               Vendor
+Product:              WUH721414AL4204
+Revision:             C110
+Compliance:           SPC-4
+User Capacity:        14,000,519,643,136 bytes [14.0 TB]
+Logical block size:   4096 bytes
+LU is fully provisioned
+Rotation Rate:        7200 rpm
+Form Factor:          3.5 inches
+Logical Unit id:      0x5000cca2588573f4
+Serial number:        9JJBD71T
+Device type:          disk
+Transport protocol:   SAS (SPL-3)
+Local Time is:        Tue Oct 29 08:15:45 2019 UTC
+SMART support is:     Available - device has SMART capability.
+SMART support is:     Enabled
+Temperature Warning:  Enabled
+Read Cache is:        Enabled
+Writeback Cache is:   Disabled
+
+=== START OF READ SMART DATA SECTION ===
+SMART Health Status: OK
+
+Current Drive Temperature:     32 C
+Drive Trip Temperature:        85 C
+
+Manufactured in week 27 of year 2019
+Specified cycle count over device lifetime:  50000
+Accumulated start-stop cycles:  34
+Specified load-unload count over device lifetime:  600000
+Accumulated load-unload cycles:  85
+Elements in grown defect list: 0
+
+Vendor (Seagate) cache information
+  Blocks sent to initiator = 0
+
+Error counter log:
+           Errors Corrected by           Total   Correction     Gigabytes    Total
+               ECC          rereads/    errors   algorithm      processed    uncorrected
+           fast | delayed   rewrites  corrected  invocations   [10^9 bytes]  errors
+read:          0        0         0         0          0          0.077           0
+write:         0        0         0         0          0          0.000           0
+verify:        0        0         0         0       6443          0.000           0
+
+Non-medium error count:        0
+
+No self-tests have been logged
+
+Background scan results log
+  Status: waiting until BMS interval timer expires
+    Accumulated power on time, hours:minutes 1233:18 [73998 minutes]
+    Number of background scans performed: 4,  scan progress: 0.00%
+    Number of background medium scans performed: 4
+
+Protocol Specific port log page for SAS SSP
+relative target port id = 1
+  generation code = 2
+  number of phys = 1
+  phy identifier = 0
+    attached device type: expander device
+    attached reason: SMP phy control function
+    reason: unknown
+    negotiated logical link rate: phy enabled; 12 Gbps
+    attached initiator port: ssp=0 stp=0 smp=0
+    attached target port: ssp=0 stp=0 smp=1
+    SAS address = 0x5000cca2588573f5
+    attached SAS address = 0x570e28403e7e40ff
+    attached phy identifier = 2
+    Invalid DWORD count = 0
+    Running disparity error count = 0
+    Loss of DWORD synchronization = 0
+    Phy reset problem = 0
+    Phy event descriptors:
+     Invalid word count: 0
+     Running disparity error count: 0
+     Loss of dword synchronization count: 0
+     Phy reset problem count: 0
+relative target port id = 2
+  generation code = 2
+  number of phys = 1
+  phy identifier = 1
+    attached device type: no device attached
+    attached reason: unknown
+    reason: power on
+    negotiated logical link rate: phy enabled; unknown
+    attached initiator port: ssp=0 stp=0 smp=0
+    attached target port: ssp=0 stp=0 smp=0
+    SAS address = 0x5000cca2588573f6
+    attached SAS address = 0x0
+    attached phy identifier = 0
+    Invalid DWORD count = 0
+    Running disparity error count = 0
+    Loss of DWORD synchronization = 0
+    Phy reset problem = 0
+    Phy event descriptors:
+     Invalid word count: 0
+     Running disparity error count: 0
+     Loss of dword synchronization count: 0
+     Phy reset problem count: 0

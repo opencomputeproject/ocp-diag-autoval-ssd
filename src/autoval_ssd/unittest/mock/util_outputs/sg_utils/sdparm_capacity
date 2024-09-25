@@ -1,0 +1,4 @@
+    /dev/sg0: ATA       GenericModel GNE2404  1020
+blocks: 500118192
+block_length: 512
+capacity_mib: 244198.3

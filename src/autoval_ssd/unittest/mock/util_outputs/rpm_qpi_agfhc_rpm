@@ -1,0 +1,18 @@
+Name        : agfhc
+Version     : 1.5.2
+Release     : 1
+Architecture: noarch
+Install Date: (not installed)
+Group       : default
+Size        : 432341
+License     : unknown
+Signature   : (none)
+Source RPM  : agfhc-1.5.2-1.src.rpm
+Build Date  : Fri 16 Feb 2024 08:16:57 AM PST
+Build Host  : 37a1c680afd4
+Relocations : /opt/oss
+Packager    : OCP
+Vendor      : Autoval OSS
+Summary     : Tool to run GPU Health Check tests on GPUs
+Description :
+Tool to run GPU Health Check tests on GPUs

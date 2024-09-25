@@ -1,0 +1,7 @@
+meta-data=/dev/sda isize=256    agcount=18, agsize=1048576 blks
+data     =                       bsize=4096   blocks=17921788, imaxpct=25
+         =                       sunit=0      swidth=0 blks, unwritten=0
+naming   =version 2              bsize=4096
+log      =internal log           bsize=4096   blocks=2187, version=1
+         =                       sunit=0 blks
+realtime =none                   extsz=65536  blocks=0, rtextents=0
