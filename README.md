@@ -32,8 +32,7 @@ $ pip install ./dist/ocptv_autoval-0.0.1.tar.gz
 ```bash
 $ cd ocp-diag-autoval-ssd
 $ python -m build
-$ mkdir -p ~/bin/ocp-diag-autoval-ssd/
-$ pip install --no-deps ./dist/ocptv_autoval_ssd-0.0.1.tar.gz --target ~/bin/ocp-diag-autoval-ssd
+$ pip install --no-deps ./dist/ocptv_autoval_ssd-0.0.1.tar.gz
 ```
 ## Environment Setup
 There are two parts to environment setup:
@@ -101,10 +100,8 @@ Example:
 ### Test Execution
 Now that you have a `hosts.json` file, you can run a test as follows.
 ```bash
-$ cd ~/bin/ocp-diag-autoval-ssd
-$ export PYTHONPATH=.
-$ env SITE_SETTINGS="$(cat path/to/site_settings.json)" \
-    python -m autoval.autoval_test_runner autoval_ssd.tests.nvme_cli.nvme_cli \
+$ export SITE_SETTINGS="path/to/site_settings.json"
+$ python -m autoval.autoval_test_runner autoval_ssd.tests.nvme_cli.nvme_cli \
     --config ./hosts.json \
     --test_control ~/bin/ocp-diag-autoval-ssd/autoval_ssd/tests/nvme_cli/control.json
 ```
