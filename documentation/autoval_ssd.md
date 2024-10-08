@@ -40,8 +40,7 @@ While this is part of the TestBase class, users are expected to override this me
 ### cleanup()
 The cleanup method goes through the StorageTestBase-specific deconstruction before carrying out TestBase deconstruction. When overriding this method, be sure to call super().cleanup(*args, **kwargs) at the very end of the line.
 
-```markdown
-```python
+```
 def cleanup(self, *args, **kwargs):
 	...
 	super().cleanup(*args, **kwargs)
