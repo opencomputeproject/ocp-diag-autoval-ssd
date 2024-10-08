@@ -102,8 +102,7 @@ To help you guide through how to run SSD tests in this repository, I will be sho
 
 Let’s say that we are planning on using the nvme_ns_resize test and op_pct_sweep_control.json as the test control. Before running the test, you have to configure the site settings and the host. In order to do so, you will have to create two separate json files.
 
-```markdown
-```json
+```
 {
     "control_server_logdir": "/autoval/logs/",
     "control_server_tmpdir": "/tmp/autoval/",
@@ -134,15 +133,13 @@ In order to make use of the yum repository, follow this guide to install yum rep
 
 After creating the site_settings.json, take note of the file path and use it to run the export command in the command line.
 
-```markdown
-```bash
+```
 export SITE_SETTINGS = /path/to/site_settings.json
 ```
 
 Then, for the host configuration, you can use the below structure.
 
-```markdown
-```json
+```
 {
     "hosts": [
         {
@@ -165,7 +162,6 @@ Currently, the test resides inside the nvme_ns_resize folder which is located wi
 
 Now that we have done the pre-test command setup, we can run the test in the command line using the following:
 
-```markdown
-```bash
+```
 python -m autoval.autoval_test_runner nvme_ns_resize.nvme_ns_resize --config /path/to/host.json --test_control ocp-diag-autoval-ssd/src/autoval_ssd/tests/nvme_ns_resize/op_pct_sweep_control.json
 ```
