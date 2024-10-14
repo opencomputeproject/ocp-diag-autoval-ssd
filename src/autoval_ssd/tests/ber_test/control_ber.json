@@ -1,0 +1,25 @@
+{
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "nvme_delay": 675,
+    "runtime": 108000,
+    "switchtec_delay": 720,
+    "fio_timeout": 216000,
+    "run_definition": {
+        "bit_error_io": {
+            "template": "bit_error_ratio.fio",
+            "args": {
+                "NAME": "ReadWriteSeq",
+                "BLK_ALIGN": "128K",
+                "BLK_SIZE": "128K",
+                "SIZE": "143750G",
+                "RDWR": "readwrite",
+                "RWMIX_READ": 50,
+                "RWMIX_WRITE": 50,
+                "LOOPS": 1,
+                "skip_iops_validation": true
+            }
+        }
+    }
+}
+

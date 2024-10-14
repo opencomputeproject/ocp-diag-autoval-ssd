@@ -1,0 +1,10 @@
+[global]
+rw=write
+blocksize=BLKSIZE
+size=100%
+ioengine=libaio
+iodepth=DEPTH
+direct=1
+loops=LOOPS
+invalidate=1
+group_reporting=1
