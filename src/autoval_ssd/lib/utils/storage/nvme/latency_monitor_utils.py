@@ -20,6 +20,7 @@ from autoval.lib.utils.uperf_test_util import ThresholdConfig
 
 from autoval_ssd.lib.utils.fio.fio_synth_flash_utils import FioSynthFlashUtils
 from autoval_ssd.lib.utils.storage.nvme.lmparser import LatencyMonitorLogParser
+from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 
 LM_FIELDS_TO_VALIDATE_Hi5 = [
     "Active Bucket Counter: Bucket 0",
@@ -62,13 +63,19 @@ class LatencyMonitor:
         self.lmparser = LatencyMonitorLogParser()
         self.dc_lm_validation = self.test_control.get("dc_lm_validation", False)
         self.ocp_lm_commands = self.test_control.get("ocp_lm_commands", False)
-        json_path = "storage/cfg/drive_latency_monitor.json"
+        json_path = "cfg/drive_latency_monitor.json"
         try:
-            self.latency_monitor_config = FileActions.read_resource_file(json_path)
-        except FileNotFoundError:
+            abs_path = NVMeDrive.get_target_path()
+            latency_monitor_config_path = abs_path + json_path
+            with open(latency_monitor_config_path, "r") as f:
+                data = f.read()
+                if data.strip() == "{}":  # check if file contains only {}
+                    raise ValueError("Latency monitor json file is empty")
+                self.latency_monitor_config = json.loads(data)
+        except (FileNotFoundError, ValueError) as e:
             if not self.ocp_lm_commands:
                 raise TestError(
-                    message="This test requires 'ocp_lm_commands: True' in absence of latency monitor json",
+                    message=f"{e}This test requires either test control parameter 'ocp_lm_commands: True' or drive_latency_monitor.json file to be present and populated with valid data.",
                     error_type=ErrorType.INPUT_ERR,
                 )
 
@@ -87,7 +94,7 @@ class LatencyMonitor:
         if self.ocp_lm_commands:
             try:
                 threshold_obj_dict = ThresholdConfig().get_threshold(
-                    filepath="havoc/autoval/thresholds/latency_monitor",
+                    filepath="autoval/thresholds/latency_monitor",
                     user_metric_list=[
                         "bucket_timer",
                         "bucket_a",

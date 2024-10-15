@@ -1,0 +1,9 @@
+
+{
+    "fstype": "xfs",
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "max_latency": 15,
+    "precondition_loops": 2,
+    "ocp_lm_commands": "True"
+}
