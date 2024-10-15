@@ -20,6 +20,7 @@ from autoval.lib.utils.uperf_test_util import ThresholdConfig
 
 from autoval_ssd.lib.utils.fio.fio_synth_flash_utils import FioSynthFlashUtils
 from autoval_ssd.lib.utils.storage.nvme.lmparser import LatencyMonitorLogParser
+from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 
 LM_FIELDS_TO_VALIDATE_Hi5 = [
     "Active Bucket Counter: Bucket 0",
@@ -62,15 +63,24 @@ class LatencyMonitor:
         self.lmparser = LatencyMonitorLogParser()
         self.dc_lm_validation = self.test_control.get("dc_lm_validation", False)
         self.ocp_lm_commands = self.test_control.get("ocp_lm_commands", False)
-        json_path = "storage/cfg/drive_latency_monitor.json"
+        json_path = "cfg/drive_latency_monitor.json"
         try:
-            self.latency_monitor_config = FileActions.read_resource_file(json_path)
+            abs_path = NVMeDrive.get_target_path()
+            self.latency_monitor_config = abs_path + json_path
+            with open(self.latency_monitor_config, "r") as f:
+                data = f.read()
+                if data.strip() == "{}":  # check if file contains only {}
+                    raise TestError(
+                        message="This test requires 'ocp_lm_commands: True' in absence of latency monitor json",
+                        error_type=ErrorType.INPUT_ERR,
+                    )
         except FileNotFoundError:
-            if not self.ocp_lm_commands:
-                raise TestError(
-                    message="This test requires 'ocp_lm_commands: True' in absence of latency monitor json",
-                    error_type=ErrorType.INPUT_ERR,
-                )
+            pass
+        if not self.ocp_lm_commands:
+            raise TestError(
+                message="This test requires 'ocp_lm_commands: True' in absence of latency monitor json",
+                error_type=ErrorType.INPUT_ERR,
+            )
 
     def enable(self, workload: str, working_directory: str) -> List[str]:
         """
