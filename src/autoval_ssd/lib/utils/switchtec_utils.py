@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # pyre-unsafe
 import json
 import re
