@@ -515,18 +515,28 @@ class NVMeDrive(Drive):
                     result[k] = v
         return {"ocp-smart-add-log": result}
 
-    def get_internal_log(self) -> bool:
-        """Return drive internal log.
+    def get_ocp_telemetry_string_log(self) -> None:
+        """
+        Retrieves and stores the OCP telemetry log from a specified NVMe drive.
         Args:
-        ----
-        None
-
+            None
         Returns:
-        -------
-        bool: The completion status of internal log file generation.
+            None
         """
         dut_logdir = SiteUtils.get_dut_logdir(self.host.hostname)
-        cmd = "nvme ocp internal-log /dev/%s" % self.block_name
+        cmd = f"nvme ocp telemetry-string-log /dev/{self.block_name}"
+        self.host.run(cmd=cmd, ignore_status=True, working_directory=dut_logdir)
+
+    def get_internal_log(self) -> bool:
+        """
+        Return drive telemetry log.
+        Args:
+            None
+        Returns:
+            The completion status of internal log file generation.
+        """
+        dut_logdir = SiteUtils.get_dut_logdir(self.host.hostname)
+        cmd = f"nvme telemetry-log --output-file=bin /dev/{self.block_name}"
         ret = self.host.run_get_result(
             cmd=cmd, ignore_status=True, working_directory=dut_logdir
         )
@@ -1342,28 +1352,19 @@ class NVMeDrive(Drive):
         This method sets the value of the power mode using
         the power management feature of the drive.
 
-        Returns
-        -------
-        feature_value : String
-            Set feature value that gives current power-mode of
-            the drive. Eg: "5".
+        Args:
+            feature_value: target power-mode of the drive. Eg: `5`.
 
-        Raises
-        ------
-        TestError
-            - When fails to set the power mode.
-            - When fails to match the set-feature output with the
-              given pattern.
-        NotImplementedError
-            - When the power mode is not supported by the drive.
+        Raises:
+            TestError
+                - When fails to set the power mode.
+                - When fails to match the set-feature output with the
+                  given pattern
         """
-
-        cmd = "nvme set-feature /dev/%s -f 0x2 -v %s" % (
-            self.block_name,
-            feature_value,
-        )
-        out = self.host.run(cmd=cmd)  # noqa
-        match = re.search(r"value:\s*(\S+)", out)
+        block_name = re.sub(r"(n\d+)(p\d+)?", "", self.block_name)
+        cmd = f"nvme set-feature /dev/{block_name} -f 0x2 --value {feature_value}"
+        out = self.host.run(cmd=cmd)
+        match = re.search(r"value:\s*(\w+)", out)
         if match:
             if int(match.group(1), 16) == feature_value:
                 return feature_value

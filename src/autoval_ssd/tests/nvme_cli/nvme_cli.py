@@ -20,7 +20,7 @@ from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
 
 class NvmeCli(StorageTestBase):
     """
-    Test to validate if NVME 1.2.1 spec commands are supported
+    Test to validate if NVME spec commands are supported
     Validations done on all the NVME drives:
         Get the controller properties,
         Get the Firmware Log,
@@ -73,6 +73,7 @@ class NvmeCli(StorageTestBase):
         self._get_id_ns(drive)
         self._get_feature(drive)
         self._get_internal_log(drive)
+        drive.get_ocp_telemetry_string_log()
         self._get_effects_log(drive)
         self._get_vs_timestamp(drive)
         self._validate_power_mode(drive)

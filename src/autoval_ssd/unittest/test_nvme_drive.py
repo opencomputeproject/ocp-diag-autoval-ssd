@@ -689,7 +689,7 @@ class NvmeDriveUnitTest(unittest.TestCase):
     @apply_mock
     def test_set_power_mode(self):
         feature = 1
-        cmd = f"nvme set-feature /dev/{self.mock_block_name} -f 0x2 -v {feature}"
+        cmd = f"nvme set-feature /dev/{self.mock_block_name} -f 0x2 --value {feature}"
         mock_output_valid = "set-feature:01 (Power Management), value:0x000001"
         mock_output_invalid = ""
         self.update_cmd_map(cmd, mock_output_valid)
