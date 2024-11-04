@@ -1,0 +1,11 @@
+{
+    "testname": "fsync_test",
+    "drive_type": "ssd",
+    "template": "prep_flash.fio",
+    "pre_condition_cycle": 1,
+    "run_definition": {
+      "BLKSIZE": "128K",
+      "DEPTH": 32,
+      "LOOPS": 0
+    }
+  }

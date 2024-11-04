@@ -1,0 +1,16 @@
+[global]
+name=NAME
+blockalign=BLK_ALIGN
+blocksize=BLK_SIZE
+ioengine=libaio
+io_size=SIZE
+iodepth=32
+loops=LOOPS
+invalidate=1
+rw=RDWR
+rwmixread=RWMIX_READ
+rwmixwrite=RWMIX_WRITE
+group_reporting=1
+norandommap
+randrepeat=0
+direct=1
