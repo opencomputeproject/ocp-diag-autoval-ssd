@@ -228,6 +228,41 @@ class SystemUtils:
         out = out.stdout
         return out.split(" ")[1]
 
+    @staticmethod
+    def make_cmd_ssh_backgroundable(
+        cmd: str,
+        logfile: str = "/dev/null",
+        errfile: str = "",
+        append: bool = True,
+    ) -> str:
+        """
+        Make command run in the background when invoked over SSH
+        Running commands in the background over SSH is notoriously difficult to accomplish.
+        This helper function rewrites the input 'cmd' so that it runs in the background using
+            - wrapping the command with 'nohup' to avoid shell hangs on logout
+            - redirect stdin to '/dev/null' to get an immediate EOF
+            - redirecting {stdout, stderr}
+            - appending '&' to tell the shell to run it in the background
+        Args:
+            cmd : Command to be converted to background command.
+            logfile : File to redirect stdout to. Default is "/dev/null" (no logging).
+            errfile : File to redirect stderr to. Default is "" (no logging).
+            append : If True, appends to logfile. Otherwise replace logfile.
+        Returns:
+            The converted command as a string.
+        """
+        bg_cmd = f"nohup {cmd}"
+        if append:
+            bg_cmd += " >>"
+        else:
+            bg_cmd += " >"
+        bg_cmd += f" {logfile} 2>"
+        if errfile:
+            bg_cmd += f" {errfile}"
+        else:
+            bg_cmd += "&1"
+        bg_cmd += " </dev/null &"
+        return bg_cmd
 
 def get_acpi_interrupt(host):
     """
