@@ -4,12 +4,13 @@ import os
 import re
 from typing import Dict
 
-from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_utils import AutovalUtils
 
 from autoval.lib.utils.generic_utils import GenericUtils
 from autoval.lib.utils.result_handler import ResultHandler
+
+from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 
 
 class NvmeVendorUtils:
@@ -49,7 +50,11 @@ class NvmeVendorUtils:
         return validate_config
 
     @staticmethod
-    def get_vendor_write_amplification(drive_obj: NVMeDrive, smart_before: Dict[str, Dict], smart_after: Dict[str, Dict]) -> bool:
+    def get_vendor_write_amplification(
+        drive_obj: NVMeDrive,
+        smart_before: Dict[str, Dict],
+        smart_after: Dict[str, Dict],
+    ) -> bool:
         """
         Method to calculates the write amplification factor (WAF) for a given drive.
         HOST and NAND write bytes are captured before and after test
@@ -74,7 +79,9 @@ class NvmeVendorUtils:
             return False
         write_amplification = {}
         nand_write_formula = drive_obj.get_nand_write_param()
-        nand_write_before = smart_before["vs-smart-add-log"][nand_write_formula["field"]]
+        nand_write_before = smart_before["vs-smart-add-log"][
+            nand_write_formula["field"]
+        ]
         nand_write_after = smart_after["vs-smart-add-log"][nand_write_formula["field"]]
         # Few Vendor specific smart data output contains data in hex
         if not isinstance(
@@ -147,5 +154,7 @@ class NvmeVendorUtils:
                 "Cannot calculate WAF for drive %s due to %s"
                 % (drive_obj.block_name, error)
             )
-        AutovalLog.log_info("Drive %s: %s" % (drive_obj.block_name, write_amplification))
+        AutovalLog.log_info(
+            "Drive %s: %s" % (drive_obj.block_name, write_amplification)
+        )
         return True

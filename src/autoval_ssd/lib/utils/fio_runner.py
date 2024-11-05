@@ -527,7 +527,7 @@ class FioRunner(TestUtilsBase):
             self.host.put_file(job_file, dest_job_file)
         AutovalLog.log_info("Job file used: %s" % dest_job_file)
         return dest_job_file
-        
+
     def get_jobfile_templates_path(self) -> str:
         """
         Return path to the jobfile_templates/ directory.

@@ -2,14 +2,16 @@
 
 # pyre-strict
 import re
-from typing import List, Tuple 
+from typing import List, Tuple
+
 from autoval.lib.host.host import Host
 
 from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_utils import AutovalLog, AutovalUtils
 
-from autoval_ssd.lib.utils.disk_utils import DiskUtils	
+from autoval_ssd.lib.utils.disk_utils import DiskUtils
 from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive, OwnershipStatus
+
 
 class SedUtils:
     @staticmethod

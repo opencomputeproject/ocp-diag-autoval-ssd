@@ -1,0 +1,6 @@
+repos:
+  - repo: https://github.com/omnilib/ufmt
+    rev: v2.0.0
+    hooks:
+      - id: ufmt
+        args: [—all-files]

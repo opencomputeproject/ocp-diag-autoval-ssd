@@ -51,7 +51,6 @@ CMD_MAP = [
 
 
 class StorageUtilsUnitTest(unittest.TestCase):
-
     def setUp(self) -> None:
         self.host = MockHost(cmd_map=CMD_MAP)
         self.nvme0n1 = NVMeDrive(self.host, "nvme0n1")
