@@ -250,7 +250,7 @@ class NVMeUtils:
         match = re.search(r"(nvme\d+)", str(drive))
         if match:
             device = match.group(1)
-        cmd = "nvme set-feature /dev/%s -f 0x6 -v 1" % device
+        cmd = "nvme set-feature /dev/%s -f 0x6 --value 1" % device
         out = host.run(cmd, ignore_status=True)
         if "not support" in out:
             AutovalLog.log_info(f"Enable write_cache not supported on {drive}: {out}")
@@ -266,7 +266,7 @@ class NVMeUtils:
         match = re.search(r"(nvme\d+)", str(drive))
         if match:
             device = match.group(1)
-        cmd = "nvme set-feature /dev/%s -f 0x6 -v 0" % device
+        cmd = "nvme set-feature /dev/%s -f 0x6 --value 0" % device
         out = host.run(cmd, ignore_status=True)
         if "not support" in out:
             AutovalLog.log_info(f"Disable write_cache not supported on {drive}: {out}")
@@ -530,7 +530,7 @@ class NVMeUtils:
         @param: string : drive
         @return integer
         """
-        cmd = "nvme set-feature /dev/%s -f 0x10 -v %s" % (drive, hex(updated_tmt))
+        cmd = "nvme set-feature /dev/%s -f 0x10 --value %s" % (drive, hex(updated_tmt))
         output = host.run(cmd, ignore_status=True)
         if "INVALID_FIELD" not in output:
             return True
