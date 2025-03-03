@@ -37,6 +37,30 @@ CMD_MAP = [
         "cmd": "nvme ocp smart-add-log /dev/nvme0",
         "result": "NVME SUCCESS",
     },
+    {
+        "cmd": "nvme set-feature /dev/nvme1 -f 0x1D -c 1 -s",
+        "result": "set-feature:1d (Unknown), value:00000000",
+    },
+    {
+        "cmd": "nvme set-feature /dev/nvme1 -f 0x1D -c 0 -s",
+        "result": "set-feature:1d (Unknown), value:00000000",
+    },
+    {
+        "cmd": "nvme set-feature /dev/nvme0 -f 0x1D -c 1 -s",
+        "result": "NVMe status: INVALID_FIELD: A reserved coded value or an unsupported value in a defined field(0x2)",
+    },
+    {
+        "cmd": "nvme get-feature /dev/nvme1 -f 0x1D -H",
+        "result": "get-feature:0x1d (Unknown), Current value:0x000001",
+    },
+    {
+        "cmd": "nvme get-feature /dev/nvme0 -f 0x1D -H",
+        "result": "NVMe status: INVALID_FIELD: A reserved coded value or an unsupported value in a defined field(0x2)",
+    },
+    {
+        "cmd": "nvme get-feature /dev/nvme2 -f 0x1D -H",
+        "result": "get-feature:0x1d (Unknown), Current value:0000000",
+    },
 ]
 
 
@@ -277,3 +301,33 @@ class NvmeUtilsUnitTest(unittest.TestCase):
        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 0000: 00 00 00 d8 00 00 00 01 00 00 00 00 00 00 00 00 "................""",
         )
+
+    def test_set_fdp(self):
+        """Test enabling and disabling FDP on NVMe drives."""
+        # Enable FDP
+        drive = "nvme1"
+        enable = True
+        self.assertTrue(NVMeUtils.set_fdp(self.host, drive, enable))
+
+        # Disable FDP
+        enable = False
+        self.assertTrue(NVMeUtils.set_fdp(self.host, drive, enable))
+
+        # Invalid Field
+        drive = "nvme0"
+        enable = True
+        self.assertFalse(NVMeUtils.set_fdp(self.host, drive, enable))
+
+    def test_get_fdp_status(self):
+        """Test getting FDP status on NVMe drives."""
+        # FDP Enabled
+        drive = "nvme1"
+        self.assertTrue(NVMeUtils.get_fdp_status(self.host, drive))
+
+        # FDP Disabled
+        drive = "nvme0"
+        self.assertFalse(NVMeUtils.get_fdp_status(self.host, drive))
+
+        # Invalid Field
+        drive = "nvme2"
+        self.assertFalse(NVMeUtils.get_fdp_status(self.host, drive))

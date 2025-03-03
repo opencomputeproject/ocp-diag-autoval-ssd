@@ -27,6 +27,8 @@ from autoval.lib.utils.uperf_test_util import ThresholdConfig
 
 from autoval_ssd.lib.utils.disk_utils import DiskUtils
 from autoval_ssd.lib.utils.filesystem_utils import FilesystemUtils
+from autoval_ssd.lib.utils.storage.drive import Drive
+from autoval_ssd.lib.utils.storage.nvme.nvme_resize_utils import NvmeResizeUtil
 from autoval_ssd.lib.utils.storage.storage_utils import StorageUtils
 from autoval_ssd.lib.utils.system_utils import SystemUtils
 
@@ -462,6 +464,7 @@ class FioRunner(TestUtilsBase):
                 content = content + key.lower() + "=" + str(value)
         idx = 0
         dev_str = content + "\n"
+        dev_str, global_blocksize_removed = self._remove_gloabal_blocksize(dev_str)
         if filesystem and not skip_fs:
             self.create_filesystem_mount(
                 self.host, drives, filesystem_type, filesystem_options
@@ -499,6 +502,9 @@ class FioRunner(TestUtilsBase):
                 else:
                     # use raw device
                     dev_str += "filename=/dev/%s\n" % str(device)
+            dev_str = self._add_device_block_size(
+                global_blocksize_removed, dev_str, device
+            )
             dev_str += "new_group=1\n"
             idx += 1
         # For tests executed from BG runner
@@ -527,7 +533,49 @@ class FioRunner(TestUtilsBase):
             self.host.put_file(job_file, dest_job_file)
         AutovalLog.log_info("Job file used: %s" % dest_job_file)
         return dest_job_file
-        
+
+    def _remove_gloabal_blocksize(self, dev_str: str) -> Tuple[str, bool]:
+        """
+        Remove global blocksize from dev_str
+
+        Args:
+            dev_str: String containing dev_str
+
+        Returns:
+            String with global blocksize removed, and flag indicating if global blocksize was removed
+        """
+        if "bs=BLKSIZE" in dev_str:
+            dev_str = dev_str.replace("\nbs=BLKSIZE", "")
+            return (dev_str, True)
+
+        return (dev_str, False)
+
+    def _add_device_block_size(
+        self, global_blocksize_removed: bool, dev_str: str, device: Union[str, Drive]
+    ) -> str:
+        """
+        Add device block size to dev_str
+
+        Args:
+            global_blocksize_removed: Flag indicating if global blocksize was removed
+            dev_str: String containing dev_str
+            device: Device name
+
+        Returns:
+            String with device block size added
+        """
+        if global_blocksize_removed:
+            device_str = str(device)
+            if re.search(r"p\d$", device_str):
+                device_str = re.sub(r"p\d$", "", device_str)
+            lbads_flag_value = NvmeResizeUtil.get_lbaf_details(
+                self.host, device_str[0:-2], nsid=int(device_str[-1])
+            )["lbads"]
+            device_block_size = str(2 ** (lbads_flag_value)) + "B"
+            dev_str += f"bs={device_block_size}\n"
+
+        return dev_str
+
     def get_jobfile_templates_path(self) -> str:
         """
         Return path to the jobfile_templates/ directory.
