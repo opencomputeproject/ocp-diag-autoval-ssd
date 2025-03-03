@@ -2,6 +2,7 @@
 
 # pyre-unsafe
 """Test to validate NVME cli commands"""
+
 import datetime
 import json
 import re
@@ -13,7 +14,9 @@ from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_utils import AutovalUtils
+from autoval_ssd.lib.utils.storage.nvme.fdp_utils import FDPUtils
 from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
+from autoval_ssd.lib.utils.storage.nvme.nvme_resize_utils import NvmeResizeUtil
 from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
 from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
 
@@ -45,6 +48,8 @@ class NvmeCli(StorageTestBase):
         self.arbitration_mechanism = self.test_control.get(
             "arbitration_mechanism", True
         )
+        self.fdp_setup = self.test_control.get("fdp_setup", False)
+        self.fdp_enabled = False
 
     def execute(self) -> None:
         self.log_info("Test to run NVME Cli commands")
@@ -56,6 +61,8 @@ class NvmeCli(StorageTestBase):
                 for drive in self.test_drives
             ]
         )
+        if self.fdp_setup:
+            self.validate_fdp()
 
     def validate_nvme_drives(self, drive) -> None:
         """Check drive nvme is write mode enabled"""
@@ -113,7 +120,7 @@ class NvmeCli(StorageTestBase):
                 AutovalUtils.validate_equal(
                     csts,
                     1,
-                    "%s: csts is %s" % (drive.block_name, csts),
+                    f"{drive.block_name}: csts is {csts}",
                     component=COMPONENT.STORAGE_DRIVE,
                     error_type=ErrorType.DRIVE_ERR,
                 )
@@ -303,12 +310,12 @@ class NvmeCli(StorageTestBase):
                 time = str(datetime.timedelta(seconds=seconds))
             except Exception:
                 time = "%s years" % years
-            self.log_info("Drive up time %s: %s" % (drive, time))
+            self.log_info(f"Drive up time {drive}: {time}")
         except NotImplementedError as exc:
             self.log_info(exc)
         except Exception as exc:
             raise TestError(
-                "get_vs_timestamp failed for drive %s: %s" % (drive, str(exc)),
+                f"get_vs_timestamp failed for drive {drive}: {str(exc)}",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.DRIVE_ERR,
             )
@@ -408,3 +415,20 @@ class NvmeCli(StorageTestBase):
             component=COMPONENT.STORAGE_DRIVE,
             error_type=ErrorType.DRIVE_ERR,
         )
+
+    def validate_fdp(self) -> None:
+        """
+        Validates FDP support and performs setup and cleanup on single drive.
+        """
+        test_drives = [
+            drive for drive in self.test_drives if drive.block_name != self.boot_drive
+        ][:1]
+        nvme_id_ctrls = NvmeResizeUtil.get_nvme_ctrls(
+            self.host, test_drives, nvme_id_ctrl_filter="True"
+        )
+        FDPUtils.validate_fdp_support(self.host, nvme_id_ctrls)
+        FDPUtils.fdp_setup(self.host, nvme_id_ctrls)
+        AutovalLog.log_info("FDP setup completed")
+
+        FDPUtils.fdp_cleanup(self.host, nvme_id_ctrls)
+        AutovalLog.log_info("FDP cleanup completed")
