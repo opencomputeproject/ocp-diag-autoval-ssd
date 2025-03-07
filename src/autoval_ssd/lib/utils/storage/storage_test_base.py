@@ -2,11 +2,12 @@
 
 # pyre-unsafe
 """Base class for testing drives"""
+
 import datetime
 import os
 import re
 import time
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional
 
 import autoval_ssd.lib.utils.storage.smart_validator as smart_validator
 from autoval.lib.host.component.component import COMPONENT
@@ -126,7 +127,7 @@ class StorageTestBase(TestBase):
     def setup(self, *args, **kwargs) -> None:
         super().setup(*args, **kwargs)
         self.storage_test_setup()
-        self.host.run("rm -f /root/havoc_fio_file", ignore_status=True)
+        self.host.run("rm -f /root/autoval_fio_file", ignore_status=True)
         AutovalLog.log_debug("lsblk Output: %s" % self.host.run(cmd="lsblk"))
         AutovalLog.log_debug("NVMe List Output: %s" % self.host.run(cmd="nvme list"))
 
@@ -137,49 +138,13 @@ class StorageTestBase(TestBase):
         FileActions.mkdirs(self.smart_log_dir)
         self.boot_drive = self.get_boot_device()
         self.drive_list = self.get_drive_list(self.boot_drive)
+        self.initial_drive_name_list = self.drive_list
         self.expander_info = self.host.get_expander()
         self.drives = self.scan_drives()
         AutovalLog.log_info("Drive info summary:")
         StorageUtils.print_drive_summary(self.drives)
         AutovalLog.log_info("Fetching test drives.")
-        if self.test_drive_filter:
-            self.test_drives = self.get_test_drives_from_drives(
-                drive_type=self.test_control.get("drive_type", None),
-                interface=self.test_control.get("drive_interface", None),
-                model=self.test_control.get("drive_model", None),
-                only_boot_drive=self.test_control.get("only_boot_drive", False),
-                include_boot_drive=self.test_control.get("include_boot_drive", False),
-            )
-        else:
-            self.test_drives = self.drives
-        # partitioned_drives will return the list of drive namespaces with partition other than boot partition
-        partitioned_drives = DiskUtils.get_partitions_and_mount_points_in_drive(
-            self.host
-        )
-        part_drive_list = [
-            key
-            for key, value in partitioned_drives.items()
-            if any(
-                "children" in item
-                and any(
-                    partition == "/"
-                    for partition in item["children"][0].get(
-                        "mountpoints", "mountpoint"
-                    )
-                )
-                for item in value
-            )
-        ]
-
-        self.test_drives = [
-            drive
-            for drive in self.test_drives
-            if drive.block_name not in part_drive_list
-        ]
-        AutovalLog.log_info(
-            "Available drives: %s, Drives under test: %s"
-            % (self.drives, self.test_drives)
-        )
+        self.test_drives = self.allocate_test_drives()
 
         if self.remove_mount_before_test and not self.test_control.get(
             "only_boot_drive"
@@ -225,7 +190,70 @@ class StorageTestBase(TestBase):
             boot_device: str = DiskUtils.get_boot_drive(self.host)
         return boot_device
 
-    def get_drive_list(self, boot_drive: str) -> List[str]:
+    def allocate_test_drives(self, drives: Optional[List[Drive]] = None) -> List[Drive]:
+        """
+        This function allocates the test drives after filtering the drives
+
+        Args:
+            drives: optional list of drives objects
+
+        Returns:
+            List of allocated test drive objects
+        """
+        if drives is None:
+            drives = self.drives
+        if self.test_drive_filter:
+            test_drives = self.get_test_drives_from_drives(
+                drives,
+                drive_type=self.test_control.get("drive_type", None),
+                interface=self.test_control.get("drive_interface", None),
+                model=self.test_control.get("drive_model", None),
+                only_boot_drive=self.test_control.get("only_boot_drive", False),
+                include_boot_drive=self.test_control.get("include_boot_drive", False),
+            )
+        else:
+            test_drives = drives
+        # Tests based on on StorageTestBase assume that there is only
+        # one "boot" drive and assume it's safe to perform block I/O on
+        # all other test drives.  But some systems have multiple "boot"
+        # drives with mounted partitions (e.g. "/").  Therefore we skip these
+        # drives to prevent filesystem corruption.
+        root_devices = self.devices_with_root_partitions()
+        test_drives = [
+            drive for drive in test_drives if drive.block_name not in root_devices
+        ]
+
+        AutovalLog.log_info(
+            f"Available drives: {drives}, Drives under test: {test_drives}"
+        )
+        return test_drives
+
+    def devices_with_root_partitions(self) -> List[str]:
+        """
+        Return devices with "/" mountpoint partition except boot drive
+
+        Args:
+            None
+
+        Returns:
+            Devices with "/" mountpoint partition except boot drive
+        """
+        partitioned_drives = DiskUtils.get_partitions_and_mount_points_in_drive(
+            self.host
+        )
+        root_devices = [
+            key
+            for key, value in partitioned_drives.items()
+            for item in value
+            if (
+                "/" in item.get("mountpoints", [])
+                or item.get("mountpoint", None) == "/"
+            )
+            and key != (self.boot_drive)
+        ]
+        return root_devices
+
+    def get_drive_list(self, boot_drive: str) -> list[str]:
         """
         This function returns the drive list
         """
@@ -243,7 +271,7 @@ class StorageTestBase(TestBase):
             AutovalLog.log_info(
                 "Warning - No boot drive found, check " "the test environment"
             )
-        return list((set(drive_list)))
+        return list(set(drive_list))
 
     def _validate_data_drive_state(self):
         """
@@ -255,32 +283,45 @@ class StorageTestBase(TestBase):
         except AttributeError:
             AutovalLog.log_info("Skipping BMC-based SSD drive health checking")
 
-    def check_block_devices_available(self) -> None:
+    def check_block_devices_available(
+        self, drive_list: Optional[List[str]] = None
+    ) -> None:
         """
         Check devices against initial list to identify the drive assertion
         and more drive related issues.
+
+        Args:
+            drive_list: optional list of drives names
         """
-        boot_drive = self.get_boot_device()
-        available_drives = self.get_drive_list(boot_drive)
-        expected_drives = self.drive_list
-        if (
-            sorted(available_drives) != sorted(expected_drives)
-            and not self.is_ssd_specific_test()
-        ):
-            AutovalLog.log_info(
-                f"Warning: Drive names have changed due to a reboot. Available drives {str(available_drives)} do not match expected drives {str(expected_drives)}"
-            )
-        else:
+        if drive_list is None:
+            drive_list = self.initial_drive_name_list
+        boot_drive_name = self.get_boot_device()
+        available_drives = self.get_drive_list(boot_drive_name)
+        expected_drives = drive_list
+        available_hdd_drives = [
+            drive for drive in available_drives if not drive.startswith("nvme")
+        ]
+        expected_hdd_drives = [
+            drive for drive in expected_drives if not drive.startswith("nvme")
+        ]
+
+        AutovalUtils.validate_equal(
+            sorted([drive for drive in available_drives if not drive.startswith("sd")]),
+            sorted([drive for drive in expected_drives if not drive.startswith("sd")]),
+            "Check available drives against initial list.",
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.DRIVE_ERR,
+        )
+        if available_hdd_drives or expected_hdd_drives:
             AutovalUtils.validate_equal(
-                sorted(available_drives),
-                sorted(expected_drives),
-                "Check available drives against initial list.",
+                len(available_hdd_drives),
+                len(expected_hdd_drives),
+                "Check available HDD drive count against initial list.",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.DRIVE_ERR,
             )
 
     def _install_required_packages(self) -> None:
-
         SystemUtils.install_rpms(
             self.host,
             self.storage_test_tools,
@@ -468,7 +509,7 @@ class StorageTestBase(TestBase):
             if partitions:
                 drive.format_drive()
 
-    def scan_drives(self) -> List:
+    def scan_drives(self) -> list:
         """
         Scan all drives and returns list of drive objects from StorageDeviceFactory
         If drive_config_file is specified in control, it will apply to all drives
@@ -501,20 +542,20 @@ class StorageTestBase(TestBase):
             ).create()
         return drive_objects
 
-    def _get_sata_drives(self) -> List:
+    def _get_sata_drives(self) -> list:
         """Returns a list of SATA drive handles from lsscsi"""
         sata_re = r"ATA.*\/dev\/(sd(?:\w+))"
         lsscsi_out = self.host.run("lsscsi")
         sata_drive_list = re.findall(sata_re, lsscsi_out)
         return sata_drive_list
 
-    def _collect_drive_data(self) -> Dict:
+    def _collect_drive_data(self) -> dict:
         """
         Collect current drives' data for before/after comparison and validation
 
         @return {}: dictionary that map drive serial number -> drive_snapshot object
         """
-        data: List[Dict] = AsyncUtils.run_async_jobs(
+        data: list[dict] = AsyncUtils.run_async_jobs(
             [AsyncJob(func=drive.collect_data) for drive in self.drives]
         )
         return {each.get("serial_number"): each for each in data}
@@ -587,7 +628,7 @@ class StorageTestBase(TestBase):
             else:
                 drive.get_write_amplification(smart_before, smart_after)
 
-    def _convert_data_for_config_check(self) -> Dict:
+    def _convert_data_for_config_check(self) -> dict:
         """
         Collect the data from each drive and store it in config check
         json format. The first key is hdd and ssd. The key in second depth
@@ -611,7 +652,7 @@ class StorageTestBase(TestBase):
         self._validate_hdd_drive_count()
         self._validate_lsblk_info()
         # Remove test file
-        self.host.run("rm -f /root/havoc_fio_file", ignore_status=True)
+        self.host.run("rm -f /root/autoval_fio_file", ignore_status=True)
         AutovalLog.log_debug("lsblk Output: %s" % self.host.run(cmd="lsblk"))
         AutovalLog.log_debug("NVMe List Output: %s" % self.host.run(cmd="nvme list"))
         # Remove partitions after test if they still exist
@@ -666,7 +707,7 @@ class StorageTestBase(TestBase):
         )
         self.result_handler._save_json(current_config_data, conf_res_file)
 
-    def save_drive_logs_async(self, drives: List[Drive]) -> None:
+    def save_drive_logs_async(self, drives: list[Drive]) -> None:
         """
         Uses AsyncUtils to dump multiple drives data as JSON in <result directory>/SMART
 
@@ -685,7 +726,7 @@ class StorageTestBase(TestBase):
             ]
         )
 
-    def save_single_drive_log(self, drive_time: Tuple) -> None:
+    def save_single_drive_log(self, drive_time: tuple) -> None:
         """
         Dumps drive data (for a single drive) as JSON in <result directory>/SMART
 
@@ -697,10 +738,10 @@ class StorageTestBase(TestBase):
         """
         drive = drive_time[0]
         timestamp = drive_time[1]
-        file_name = "{}.json".format(drive.serial_number)
+        file_name = f"{drive.serial_number}.json"
         FileActions.mkdirs(os.path.join(self.smart_log_dir, timestamp))
         file_path = os.path.join(self.smart_log_dir, timestamp, file_name)
-        AutovalLog.log_info("{} Saving SMART data at {}".format(drive, file_path))
+        AutovalLog.log_info(f"{drive} Saving SMART data at {file_path}")
         FileActions.write_data(
             file_path,
             drive.collect_data(),
@@ -709,22 +750,36 @@ class StorageTestBase(TestBase):
 
     def get_test_drives_from_drives(
         self,
+        drives: Optional[List[Drive]] = None,
         drive_type: Optional[str] = None,
         interface: Optional[str] = None,
         model: Optional[str] = None,
         only_boot_drive: bool = False,
         include_boot_drive: bool = False,
     ) -> List[Drive]:
-        """Filter drives that meet provided criteria for testing"""
+        """
+        Filter drives that meet provided criteria for testing.
+        Args:
+            drives: A list of drives to filter.
+            drive_type: The type of drive to filter by. Defaults to None.
+            interface: The interface of the drive to filter by. Defaults to None.
+            model: The model of the drive to filter by. Defaults to None.
+            only_boot_drive: Whether to only return the boot drive. Defaults to False.
+            include_boot_drive: Whether to include the boot drive in the filtered list. Defaults to False.
+        Returns:
+            A list of drives that meet the provided criteria.
+        """
+        if drives is None:
+            drives = self.drives
         if only_boot_drive:
             # Take only boot drive
-            filtered = [d for d in self.drives if str(d) == str(self.boot_drive)]
+            filtered = [d for d in drives if str(d) == str(self.boot_drive)]
         elif include_boot_drive:
             # Add boot drive to existing data drives. Take all drives
-            filtered = self.drives
+            filtered = drives
         else:
             # Take all drives except boot drive
-            filtered = [d for d in self.drives if str(d) != str(self.boot_drive)]
+            filtered = [d for d in drives if str(d) != (self.boot_drive)]
         if drive_type:
             _enum_type = DriveType(drive_type)
             filtered = self._filter_drive_by_attr(filtered, "type", _enum_type)
@@ -735,16 +790,16 @@ class StorageTestBase(TestBase):
             filtered = self._filter_drive_by_attr(filtered, "model", model)
         return filtered
 
-    def get_block_name_from_drive_list(self, drives: List[Drive]) -> List[str]:
+    def get_block_name_from_drive_list(self, drives: list[Drive]) -> list[str]:
         """Return list of drives from drive ojects"""
         return [drive.block_name for drive in drives]
 
     def _filter_drive_by_attr(
         self,
-        drives: List[Drive],
+        drives: list[Drive],
         attr: str,
-        value: Union[str, DriveInterface, DriveType],
-    ) -> List[Drive]:
+        value: str | DriveInterface | DriveType,
+    ) -> list[Drive]:
         """
         Return drives in a list that has an attribute equal a provided value
 
@@ -810,7 +865,7 @@ class StorageTestBase(TestBase):
                 host=self.host, device=drive.block_name
             )
             if df_info["mounted_on"] != "/dev":
-                msg = "Failed to umount on drive %s for mount_path: %s" % (
+                msg = "Failed to umount on drive {} for mount_path: {}".format(
                     str(drive.block_name),
                     df_info["mounted_on"],
                 )

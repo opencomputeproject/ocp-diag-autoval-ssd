@@ -16,6 +16,7 @@ from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread  # noqa
 from autoval.lib.utils.autoval_utils import AutovalUtils
+from autoval_ssd.lib.utils.storage.drive import Drive
 
 from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
 
@@ -477,6 +478,7 @@ class NvmeResizeUtil:
         sweep_param_value: int | float,
         nvme_id_ctrl_filter: str = "True",
         cycle=1,
+        **kwargs,
     ) -> None:
         """
         This function performs a resize operation on the specified NVMe drives.
@@ -545,6 +547,7 @@ class NvmeResizeUtil:
                         sweep_param_key,
                         device,
                         sweep_param_value,
+                        **kwargs,
                     )
                 )
             if len(ns_validate_queue):
@@ -678,4 +681,37 @@ class NvmeResizeUtil:
             result = re.search(pattern, out)
             if result:
                 lbaf_to_flbas_map[lbaf] = int(result.group(1))
+        return lbaf_to_flbas_map
+
+    @staticmethod
+    def validate_drives_support_dix_resize_lba_formats(
+        host: Host, drive_list: List[Drive]
+    ) -> Dict[str, int]:
+        """
+        Checks the supported LBA formats for each drive in the provided output.
+        This function runs a command to identify the namespace of each drive and then checks the output
+        for specific patterns that indicate the supported LBA formats.
+        Args:
+            host: The host on which to run the command.
+            drive_list: A list of drives to check for supported LBA formats.
+        Returns:
+            lbaf_to_flbas_map: A dictionary containing the supported LBA formats for each drive and their
+            corresponding values to be used during resize
+        """
+        required_formats = {"512", "4096", "4096+64"}
+        lbaf_to_flbas_map = {}
+
+        for drive in drive_list:
+            lbaf_to_flbas_map = NvmeResizeUtil.get_lbaf_to_flbas_map(
+                host, drive.block_name
+            )
+
+            AutovalUtils.validate_condition(
+                required_formats.issubset(lbaf_to_flbas_map.keys()),
+                f"{drive.block_name} supports all DIX LBA Formats",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.DRIVE_ERR,
+                log_on_pass=True,
+            )
+
         return lbaf_to_flbas_map

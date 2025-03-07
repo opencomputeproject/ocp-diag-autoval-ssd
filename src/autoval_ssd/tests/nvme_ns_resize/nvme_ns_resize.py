@@ -3,6 +3,7 @@
 # pyre-unsafe
 """Nvme namespace resize test"""
 
+from time import sleep
 from typing import Any, Dict, List, Optional, Union
 
 from autoval.lib.host.component.component import COMPONENT
@@ -12,6 +13,7 @@ from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval_ssd.lib.utils.fio_runner import FioRunner
 from autoval_ssd.lib.utils.storage.drive import Drive
+from autoval_ssd.lib.utils.storage.drive_fw_update_util import DriveFwUpdateUtil
 from autoval_ssd.lib.utils.storage.nvme.fdp_utils import FDPUtils
 from autoval_ssd.lib.utils.storage.nvme.nvme_resize_utils import NvmeResizeUtil
 from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
@@ -77,6 +79,12 @@ class NvmeNSResize(StorageTestBase):
             "workloads", {}
         )
         self.validate_tooling: bool = self.test_control.get("validate_tooling", False)
+        self.lbaf_combinations: List[List[str]] = self.test_control.get(
+            "lbaf_combinations", []
+        )
+        self.validate_drive_fw_update: bool = self.test_control.get(
+            "validate_drive_fw_update", False
+        )
         self.fdp_setup: bool = self.test_control.get("fdp_setup", False)
         self.fdp_enabled: bool = False
 
@@ -107,7 +115,10 @@ class NvmeNSResize(StorageTestBase):
                 for resize_cycle, sweep_param_value in enumerate(
                     self.sweep_param_values
                 ):
-                    self.run_standard_resize(resize_cycle, sweep_param_value)
+                    if self.dix_ns_resize:
+                        self.run_dix_ns_resize(sweep_param_value)
+                    else:
+                        self.run_standard_resize(resize_cycle, sweep_param_value)
             self.log_info(f"Cycle {_cycle} completed")
 
     def run_standard_resize(
@@ -143,6 +154,71 @@ class NvmeNSResize(StorageTestBase):
             error_type=ErrorType.TOOL_ERR,
         )
 
+    def run_dix_ns_resize(self, sweep_param_value: Union[int, float]) -> None:
+        """
+        This function performs the following steps:
+            1. Validates that the test drives support the required LBAF for Dix resize.
+            2. Performs a resize operation on the test drives using labaf combinations.
+            3. When validate_tooling is set to True, it performs filesystem validation on the test drives.
+            4. Otherwise, it verifies data integrity on the test drives.
+            5. If validate_drive_fw_update is set to True, it performs firmware update on the test drives.
+
+        Args:
+            sweep_param_value: The value of the sweep parameter used in the current resize cycle.
+        """
+
+        lbaf_to_flbas_map = (
+            NvmeResizeUtil.validate_drives_support_dix_resize_lba_formats(
+                self.host, self.test_drives
+            )
+        )
+        self.log_info(f"lbaf to flbas map {lbaf_to_flbas_map}")
+        if not self.lbaf_combinations:
+            self.lbaf_combinations = [
+                ["4096", "4096"],
+                ["4096", "512"],
+                ["4096", "4096+64"],
+                ["512", "512"],
+                ["512", "4096"],
+                ["512", "4096+64"],
+                ["4096+64", "4096+64"],
+                ["4096+64", "512"],
+                ["4096+64", "4096"],
+            ]
+
+        dix_test_drives = self.test_drives
+        for combo_resize_cycle, combo in enumerate(self.lbaf_combinations):
+            self.log_info(
+                f"Starting lbaf combo resize cycle {combo_resize_cycle+1} with combination {combo}"
+            )
+
+            NvmeResizeUtil.perform_resize(
+                self.host,
+                dix_test_drives,
+                sweep_param_key=self.sweep_param_key,
+                sweep_param_unit=self.sweep_param_unit,
+                sweep_param_value=sweep_param_value,
+                nvme_id_ctrl_filter=self.nvme_id_ctrl_filter,
+                combination=combo,
+                lbaf_to_flbas_map=lbaf_to_flbas_map,
+                use_existing_ns=(combo_resize_cycle != 0),
+            )
+            sleep(5)
+
+            dix_drive_list = self.get_drive_list(self.boot_drive)
+            dix_drives = self.scan_drives()
+            dix_test_drives = self.allocate_test_drives(dix_drives)
+
+            if self.validate_tooling:
+                self.tooling_filesystem_validation(dix_test_drives, dix_drive_list)
+            else:
+                self.verify_data_integrity(dix_test_drives, dix_drive_list)
+
+            if self.validate_drive_fw_update:
+                drive_fw_updater = DriveFwUpdateUtil(self.host, self.test_control)
+                for drive in self.test_drives:
+                    drive_fw_updater.test_firmware_update(drive, "latest")
+
     def run_fdp_workflow(self) -> None:
         """
         This function performs the following steps:
@@ -165,6 +241,11 @@ class NvmeNSResize(StorageTestBase):
             self.verify_data_integrity(
                 self.test_drives, self.get_drive_list(self.boot_drive)
             )
+
+        if self.validate_drive_fw_update:
+            drive_fw_updater = DriveFwUpdateUtil(self.host, self.test_control)
+            for drive in self.test_drives:
+                drive_fw_updater.test_firmware_update(drive, "latest")
 
     def verify_data_integrity(
         self, test_drives: List[Drive], drive_list: List[str]
@@ -194,7 +275,7 @@ class NvmeNSResize(StorageTestBase):
                 error_type=ErrorType.TOOL_ERR,
             )
 
-            self.check_block_devices_available()
+            self.check_block_devices_available(drive_list)
             self.log_namespace_usage(test_drives)
 
     def tooling_filesystem_validation(
@@ -232,7 +313,7 @@ class NvmeNSResize(StorageTestBase):
                 error_type=ErrorType.TOOL_ERR,
             )
 
-            self.check_block_devices_available()
+            self.check_block_devices_available(drive_list)
             self.validate_no_exception(
                 self.fio_runner.test_cleanup,
                 [],
