@@ -5,7 +5,7 @@
     "sweep_param_unit": "percent",
     "sweep_param_values": [75],
     "cycle_count": 1,
-    "fdp_setup": true,
+    "dix_ns_resize": true,
     "validate_drive_fw_update": false,
     "force_update" : true,
     "fw_slots": [1],
