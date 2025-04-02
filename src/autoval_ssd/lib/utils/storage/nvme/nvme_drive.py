@@ -550,7 +550,9 @@ class NVMeDrive(Drive):
         TestStepError
             When fails to retrieve the command effects log.
         """
-        cmd = "nvme effects-log /dev/%s -o json" % self.block_name
+        pattern = re.compile(r'^(nvme\d+)(?=n)')
+        char_name = pattern.match(self.block_name).group(1)
+        cmd = "nvme effects-log /dev/%s -o json" % char_name
         out = self.host.run(cmd=cmd)
         return json.loads(out)
 
