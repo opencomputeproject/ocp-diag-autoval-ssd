@@ -106,9 +106,9 @@ class NvmeCli(StorageTestBase):
                     error_type=ErrorType.DRIVE_ERR,
                 )
             # Check csts
-            csts_match = re.search(r"csts\s+:\s+(\d+)", out)
+            csts_match = re.search(r"csts\s+:\s+(0x[0-9a-fA-F]+|\d+)", out)
             if csts_match:
-                csts = int(csts_match.group(1))
+                csts = int(csts_match.group(1), 0)
                 AutovalUtils.validate_equal(
                     csts,
                     1,
