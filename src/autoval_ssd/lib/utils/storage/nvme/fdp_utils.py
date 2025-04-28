@@ -78,7 +78,7 @@ class FDPUtils:
     def validate_nvme_version(host: Host) -> bool:
         """
         This function validates the NVMe version on the host.
-        If the NVMe version is not 2.9 or higher, it installs the nvme-cli-2.9.1 package and validates again.
+        If the NVMe version is not 2.10 or higher, it installs the nvme-cli-2.10.2 package and validates again.
 
         Args:
             host: The host object where the NVMe version is validated.
@@ -87,23 +87,23 @@ class FDPUtils:
             A boolean indicating whether the new NVMe version was installed.
 
         Raises:
-            TestError: If the NVMe version is not 2.9 or higher.
+            TestError: If the NVMe version is not 2.10 or higher.
         """
         nvme_installed = False
         nvme_version = NVMeUtils.get_nvme_version(host)
 
-        # This install will be removed once we have nvme-cli-2.9.1 or higher as default on all hosts
-        if not NVMeUtils.compare_versions("2.9.0", nvme_version):
+        # This install will be removed once we have nvme-cli-2.10.2 or higher as default on all hosts
+        if not NVMeUtils.compare_versions("2.10.0", nvme_version):
             AutovalLog.log_info(
-                f"Current NVMe version '{nvme_version}' does not support FDP validation. Installing nvme-cli-2.9.1"
+                f"Current NVMe version '{nvme_version}' does not support FDP validation. Installing nvme-cli-2.10.2"
             )
-            SystemUtils.install_rpms(host, ["nvme-cli-2.9.1", "libnvme-1.9"])
+            SystemUtils.install_rpms(host, ["nvme-cli-2.10.2", "libnvme-1.10"])
             nvme_version = NVMeUtils.get_nvme_version(host)
             nvme_installed = True
 
         AutovalUtils.validate_condition(
-            NVMeUtils.compare_versions("2.9.0", nvme_version),
-            "NVMe version 2.9 or higher required for FDP validation",
+            NVMeUtils.compare_versions("2.10.0", nvme_version),
+            "NVMe version 2.10 or higher required for FDP validation",
             component=COMPONENT.STORAGE_DRIVE,
             error_type=ErrorType.NVME_ERR,
             log_on_pass=True,

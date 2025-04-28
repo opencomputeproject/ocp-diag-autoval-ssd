@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+# pyre-unsafe
 import unittest
 
 from unittest import mock
@@ -143,7 +145,7 @@ class FDPUtilsUnitTest(unittest.TestCase):
         FDPUtils.validate_fdp_support(self.host, nvme_id_ctrls)
         mock_validate_condition.assert_called_once_with(
             False,
-            "NVMe version 2.9 or higher required for FDP validation",
+            "NVMe version 2.10 or higher required for FDP validation",
             component=COMPONENT.STORAGE_DRIVE,
             error_type=ErrorType.NVME_ERR,
             log_on_pass=True,

@@ -1,0 +1,44 @@
+{
+    "CacheBench_loop": {
+          "CacheBench_Global": {
+              "Max_Read_Latency_MAX": "<65000",
+        "Max_Write_Latency_MAX": "<85000"
+          },
+          "TaoLeader": {
+
+            "Get_Rate_MIN":">87000",
+            "Set_Rate_MIN":">16000",
+
+            "NVM_Read_Latency_p50_MAX": "<100",
+            "NVM_Read_Latency_p90_MAX": "<300",
+            "NVM_Read_Latency_p99_MAX": "<800",
+            "NVM_Read_Latency_p99.99_MAX": "<3000",
+            "NVM_Read_Latency_Max_MAX": "<12000",
+
+            "NVM_Write_Latency_p50_MAX": "<30",
+            "NVM_Write_Latency_p90_MAX": "<50",
+            "NVM_Write_Latency_p99_MAX": "<100",
+            "NVM_Write_Latency_p99.99_MAX": "<700",
+            "NVM_Write_Latency_p100_MAX": "<8000"
+
+
+             },
+        "MemCache": {
+
+            "Get_Rate_MIN":">3200",
+            "Set_Rate_MIN":">1500",
+
+            "NVM_Read_Latency_p50_MAX": "<300",
+            "NVM_Read_Latency_p90_MAX": "<700",
+            "NVM_Read_Latency_p99_MAX": "<2000",
+            "NVM_Read_Latency_p99.99_MAX": "<14000",
+            "NVM_Read_Latency_Max_MAX": "<15000",
+
+            "NVM_Write_Latency_p50_MAX": "<100",
+            "NVM_Write_Latency_p90_MAX": "<200",
+            "NVM_Write_Latency_p99_MAX": "<400",
+            "NVM_Write_Latency_p99.99_MAX": "<7000",
+            "NVM_Write_Latency_p100_MAX": "<8000"
+
+
+}}}

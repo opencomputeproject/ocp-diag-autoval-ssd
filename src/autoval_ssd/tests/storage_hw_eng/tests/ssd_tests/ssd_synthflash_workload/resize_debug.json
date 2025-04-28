@@ -1,0 +1,85 @@
+{
+    "drive_type": "ssd",
+    "ignore_smart": true,
+    "drive_interface": "nvme",
+    "preferred_scheduler": "kyber",
+    "io_timeout": "60000",
+    "discard_max_bytes": "67108864",
+    "max_sectors_kb": "2000",
+    "DEBUG" : 1,
+    "collect_smart_log": false,
+    "collect_drive_data": false,
+    "synth_verify": false,
+
+
+    "workload_configs"  :
+    [
+        {   "preferred_scheduler": "kyber",
+            "io_timeout": "60000",
+            "discard_max_bytes": "67108864",
+
+            "perform_resize": false,
+                "sweep_param_key": "usercapacity",
+                "sweep_param_unit": "num_TB",
+                "sweep_param_value": 1.5,
+                "cycle_count": 1,
+
+            "perform_raid": true,
+                "raid_details": [
+                    {
+                        "devices" : ["nvme1n1", "nvme2n1"],
+                        "values": {
+                            "create" : "/dev/md1", "level": "0"
+                        }
+                    },
+                    {
+                        "devices" : ["nvme3n1", "nvme4n1"],
+                        "values": {
+                            "create" : "/dev/md2", "level": "0"
+                        }
+                    }
+                ],
+            "set_power_state": true,
+                "power_state": 8,
+
+            "devices" : ["/dev/md1","/dev/md2"],
+            "workload_suites"  : ["prep"]
+        },
+
+        {   "perform_resize": false,
+            "perform_raid": true,
+                "raid_details": [
+                    {
+                        "values": {
+                            "create" : "/dev/md1", "level": "0"
+                        }
+                    }
+                ],
+            "devices" : ["/dev/md1"],
+            "workload_suites"  : ["prep"]
+        },
+
+        {   "perform_resize": false,
+                "sweep_param_key": "overprovisioning",
+                "sweep_param_unit": "percent",
+                "sweep_param_value": 7,
+                "cycle_count": 1,
+            "perform_raid": false,
+
+            "devices" : ["/dev/nvme1n1", "/dev/nvme2n1"],
+            "workload_suites"  : ["prep"]
+        },
+
+
+        {   "perform_resize": false,
+            "perform_raid": false,
+
+            "devices" : ["ALL"],
+            "workload_suites"  : ["prep"]
+        }
+
+        ],
+    "wr_cache" : true,
+    "num_runs" : 1,
+    "flash_config_logging" : true
+}

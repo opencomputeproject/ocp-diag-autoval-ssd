@@ -1,0 +1,11 @@
+{
+    "fstype": "xfs",
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "max_latency": 15,
+
+    "trimrate": true,
+    "workload": "TrimRate",
+    "secure_erase_option": 0,
+    "iogo_runtime": 30
+}

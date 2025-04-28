@@ -1,0 +1,81 @@
+{
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "DEBUG" : 1,
+    "collect_smart_log": false,
+    "collect_drive_data": false,
+    "timeout" : 518400,
+    "update_JSON_config" : true,
+    "pass_fail_verify" : true,
+    "ocp_lm_commands" : true,
+
+    "workload_configs"  :
+    [
+        {
+            "perform_resize": false,
+                "sweep_param_key": "usercapacity",
+                "sweep_param_unit": "num_TB",
+                "sweep_param_value": 1.5,
+                "cycle_count": 1,
+
+            "perform_raid": false,
+                "raid_details": [
+                    {
+                        "devices" : ["nvme1n1","nvme2n1"],
+                        "values": {
+                            "create" : "/dev/md0", "level": "0"
+                        }
+                    },
+                    {
+                        "devices" : ["nvme3n1","nvme4n1"],
+                        "values": {
+                            "create" : "/dev/md1", "level": "1"
+                        }
+                    }
+                ],
+
+            "power_state": true,
+                "set_power_state": 8,
+
+            "workload_suites"  : [
+
+                                {
+                                    "name":"MemCache",
+                                    "workload_folder_path":"ssd_perf/kvcache_l2_wc",
+                                    "workload_file_name":"config.json",
+                                    "path":"ssd_perf/kvcache_l2_wc/config.json",
+                                    "parameters_override":{
+                                        "cache_config.nvmCachePaths": ["/dev/nvme1n1", "/dev/nvme2n1", "/dev/nvme3n1", "/dev/nvme4n1"],
+                                        "cache_config.writeAmpDeviceList": [
+                                            "nvme1n1",
+                                            "nvme2n1",
+                                            "nvme3n1",
+                                            "nvme4n1"
+                                        ],
+                                        "cache_config.nvmCacheSizeMB": 932000
+                                    }
+                                },
+
+                                {
+                                "name":"TaoLeader",
+                                "workload_folder_path":"ssd_perf/graph_cache_leader",
+                                "workload_file_name":"config.json",
+                                "path":"ssd_perf/graph_cache_leader/config.json",
+                                "parameters_override":{
+                                    "cache_config.nvmCachePaths": ["/dev/nvme1n1", "/dev/nvme2n1", "/dev/nvme3n1", "/dev/nvme4n1"],
+                                    "cache_config.writeAmpDeviceList": [
+                                        "nvme1n1",
+                                        "nvme2n1",
+                                        "nvme3n1",
+                                        "nvme4n1"
+                                    ],
+                                    "cache_config.nvmCacheSizeMB": 932000
+                                }
+                            }
+
+                                ]
+        }
+        ],
+    "wr_cache" : true,
+    "num_runs" : 1
+}
