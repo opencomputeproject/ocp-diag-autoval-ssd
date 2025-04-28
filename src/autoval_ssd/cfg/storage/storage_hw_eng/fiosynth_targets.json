@@ -1,0 +1,1295 @@
+{
+	"HE_Flash_Short_wTRIM_1H22": {
+		"HE_Flash_Short_wTRIM_1H22_Global": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000"
+		},
+		"4K_L2R6DWPD_wTRIM": {
+			"Read_BW_PER_TB_MIN": ">68000",
+			"Write_BW_PER_TB_MIN": ">72000",
+			"Trim_BW_PER_TB_MIN": ">117000",
+			"P99_Read_Latency_MAX": "<1500",
+			"P99.99_Read_Latency_MAX": "<2500",
+			"P99.9999_Read_Latency_MAX": "<5000",
+			"Max_Read_Latency_MAX": "<10000",
+			"P99.99_Write_Latency_MAX": "<8000",
+			"P99.9999_Write_Latency_MAX": "<15000",
+			"Max_Write_Latency_MAX": "<20000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"4K_L2R9DWPD_wTRIM_normal": {
+			"Read_BW_PER_TB_MIN": ">68000",
+			"Write_BW_PER_TB_MIN": ">93000",
+			"Trim_BW_PER_TB_MIN": ">156000",
+			"P99_Read_Latency_MAX": "<1500",
+			"P99.99_Read_Latency_MAX": "<2500",
+			"P99.9999_Read_Latency_MAX": "<5000",
+			"Max_Read_Latency_MAX": "<10000",
+			"P99.99_Write_Latency_MAX": "<8000",
+			"P99.9999_Write_Latency_MAX": "<15000",
+			"Max_Write_Latency_MAX": "<20000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+
+		"4K_L2R9DWPD_wTRIM": {
+			"Read_BW_PER_TB_MIN": ">68000",
+			"Write_BW_PER_TB_MIN": ">93000",
+			"Trim_BW_PER_TB_MIN": ">156000",
+			"P99_Read_Latency_MAX": "<1500",
+			"P99.99_Read_Latency_MAX": "<2500",
+			"P99.9999_Read_Latency_MAX": "<5000",
+			"Max_Read_Latency_MAX": "<10000",
+			"P99.99_Write_Latency_MAX": "<8000",
+			"P99.9999_Write_Latency_MAX": "<15000",
+			"Max_Write_Latency_MAX": "<20000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"MyRocks_Heavy_wTRIM": {
+			"Read_BW_PER_TB_MIN": ">210000",
+			"Write_BW_PER_TB_MIN": ">101000",
+			"Trim_BW_PER_TB_MIN": ">22000",
+			"P99_Read_Latency_MAX": "<1500",
+			"P99.99_Read_Latency_MAX": "<2500",
+			"P99.9999_Read_Latency_MAX": "<8500",
+			"Max_Read_Latency_MAX": "<15000",
+			"P99.99_Write_Latency_MAX": "<8000",
+			"P99.9999_Write_Latency_MAX": "<15000",
+			"Max_Write_Latency_MAX": "<20000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"FLeaf_wTRIM": {
+			"Read_BW_PER_TB_MIN": ">320000",
+			"Write_BW_PER_TB_MIN": ">87000",
+			"Trim_BW_PER_TB_MIN": ">89000",
+			"P99_Read_Latency_MAX": "<1500",
+			"P99.99_Read_Latency_MAX": "<2500",
+			"P99.9999_Read_Latency_MAX": "<10000",
+			"Max_Read_Latency_MAX": "<15000",
+			"P99.99_Write_Latency_MAX": "<20000",
+			"P99.9999_Write_Latency_MAX": "<15000",
+			"Max_Write_Latency_MAX": "<25000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Search_1H22": {
+		"SearchIndex_wTRIM": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"SearchLM_wTRIM": {
+			"Read_BW_MIN": ">2550000",
+			"Write_BW_MIN": ">12000",
+			"Trim_BW_MIN": ">130000",
+			"P99_Read_Latency_MAX": "<1500",
+			"P99.99_Read_Latency_MAX": "<5000",
+			"P99.9999_Read_Latency_MAX": "<15000",
+			"Max_Read_Latency_MAX": "<20000",
+			"P99.99_Write_Latency_MAX": "<15000",
+			"P99.9999_Write_Latency_MAX": "<20000",
+			"Max_Write_Latency_MAX": "<25000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"SearchLM_wTRIM_normal": {
+			"Read_BW_MIN": ">2550000",
+			"Write_BW_MIN": ">12000",
+			"Trim_BW_MIN": ">130000",
+			"P99_Read_Latency_MAX": "<1000000",
+			"P99.99_Read_Latency_MAX": "<1000000",
+			"P99.9999_Read_Latency_MAX": "<1000000",
+			"Max_Read_Latency_MAX": "<1000000",
+			"P99.99_Write_Latency_MAX": "<1000000",
+			"P99.9999_Write_Latency_MAX": "<1000000",
+			"Max_Write_Latency_MAX": "<1000000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"prep_flash": {
+			"Read_BW_MAX": "<1",
+			"Write_BW_MIN": ">0"
+		}
+	},
+	"Cache_1H22": {
+		"Cache_1H22_Global": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"B_Cache": {
+			"Read_BW_PER_TB_MIN": ">164000",
+			"Write_BW_PER_TB_MIN": ">96000",
+			"P99_Read_Latency_MAX": "<2000",
+			"P99.99_Read_Latency_MAX": "<5500",
+			"P99.9999_Read_Latency_MAX": "<15000",
+			"Max_Read_Latency_MAX": "<20000",
+			"P99.99_Write_Latency_MAX": "<20000",
+			"P99.9999_Write_Latency_MAX": "<25000",
+			"Max_Write_Latency_MAX": "<30000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"B_Cache_normal": {
+			"Read_BW_PER_TB_MIN": ">164000",
+			"Write_BW_PER_TB_MIN": ">96000",
+			"P99_Read_Latency_MAX": "<2000",
+			"P99.99_Read_Latency_MAX": "<5500",
+			"P99.9999_Read_Latency_MAX": "<15000",
+			"Max_Read_Latency_MAX": "<20000",
+			"P99.99_Write_Latency_MAX": "<20000",
+			"P99.9999_Write_Latency_MAX": "<25000",
+			"Max_Write_Latency_MAX": "<30000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"WSF_1H22": {
+		"WSF_1H22_Global": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000"
+		},
+		"wsf-tl-1H22-normal": {
+			"Read_BW_PER_TB_MIN": ">78000",
+			"Write_BW_PER_TB_MIN": ">34000",
+			"Trim_BW_PER_TB_MIN": ">29000",
+			"P99_Read_Latency_MAX": "<1000",
+			"P99.99_Read_Latency_MAX": "<5000",
+			"P99.9999_Read_Latency_MAX": "<10000",
+			"Max_Read_Latency_MAX": "<25000",
+			"P99.99_Write_Latency_MAX": "<10000",
+			"P99.9999_Write_Latency_MAX": "<15000",
+			"Max_Write_Latency_MAX": "<25000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"WSF_2H21": {
+		"WSF_2H21_Global": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000"
+		},
+		"wsf-t-normal": {
+			"Read_BW_PER_TB_MIN": ">0",
+			"Write_BW_PER_TB_MIN": ">0",
+			"Trim_BW_PER_TB_MIN": ">0",
+			"P99_Read_Latency_MAX": "<1000000",
+			"P99.99_Read_Latency_MAX": "<1000000",
+			"P99.9999_Read_Latency_MAX": "<1000000",
+			"Max_Read_Latency_MAX": "<1000000",
+			"P99_Write_Latency_MAX": "<1000000",
+			"P99.99_Write_Latency_MAX": "<1000000",
+			"P99.9999_Write_Latency_MAX": "<1000000",
+			"Max_Write_Latency_MAX": "<1000000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"wsf-tl-normal": {
+			"Read_BW_PER_TB_MIN": ">112400",
+			"Write_BW_PER_TB_MIN": ">68000",
+			"Trim_BW_PER_TB_MIN": ">41400",
+			"P99_Read_Latency_MAX": "<1000",
+			"P99.99_Read_Latency_MAX": "<4000",
+			"P99.9999_Read_Latency_MAX": "<8000",
+			"Max_Read_Latency_MAX": "<20000",
+			"P99.99_Write_Latency_MAX": "<20000",
+			"P99.9999_Write_Latency_MAX": "<30000",
+			"Max_Write_Latency_MAX": "<50000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"WSF": {
+		"wsf-tl-heavy": {
+			"Read_BW_PER_TB_MIN": ">23760",
+			"Write_BW_PER_TB_MIN": ">14620",
+			"P99_Read_Latency_MAX": "<1000",
+			"P99.99_Read_Latency_MAX": "<4000",
+			"P99.9999_Read_Latency_MAX": "<9000",
+			"Max_Read_Latency_MAX": "<25000",
+			"P99.99_Write_Latency_MAX": "<42000",
+			"P99.9999_Write_Latency_MAX": "<45000",
+			"Max_Write_Latency_MAX": "<50000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"wsf-t-normal": {
+			"Read_BW_PER_TB_MIN": ">0",
+			"Write_BW_PER_TB_MIN": ">0",
+			"Trim_BW_PER_TB_MIN": ">0",
+			"P99_Read_Latency_MAX": "<1000000",
+			"P99.99_Read_Latency_MAX": "<1000000",
+			"P99.9999_Read_Latency_MAX": "<1000000",
+			"Max_Read_Latency_MAX": "<1000000",
+			"P99_Write_Latency_MAX": "<1000000",
+			"P99.99_Write_Latency_MAX": "<1000000",
+			"P99.9999_Write_Latency_MAX": "<1000000",
+			"Max_Write_Latency_MAX": "<1000000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"wsf-tl-normal": {
+			"Read_BW_PER_TB_MIN": ">0",
+			"Write_BW_PER_TB_MIN": ">0",
+			"Trim_BW_PER_TB_MIN": ">0",
+			"P99_Read_Latency_MAX": "<1000000",
+			"P99.99_Read_Latency_MAX": "<1000000",
+			"P99.9999_Read_Latency_MAX": "<1000000",
+			"Max_Read_Latency_MAX": "<1000000",
+			"P99_Write_Latency_MAX": "<1000000",
+			"P99.99_Write_Latency_MAX": "<1000000",
+			"P99.9999_Write_Latency_MAX": "<1000000",
+			"Max_Write_Latency_MAX": "<1000000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"wsf-t-heavy": {
+			"Read_BW_PER_TB_MIN": ">440",
+			"Write_BW_PER_TB_MIN": ">3550",
+			"P99_Read_Latency_MAX": "<400",
+			"P99.99_Read_Latency_MAX": "<2800",
+			"P99.9999_Read_Latency_MAX": "<3000",
+			"Max_Read_Latency_MAX": "<3300",
+			"P99.99_Write_Latency_MAX": "<3700",
+			"P99.9999_Write_Latency_MAX": "<4200",
+			"Max_Write_Latency_MAX": "<5000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+
+	},
+	"WSCACHE_1H22": {
+		"WSF_1H22_Global": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<100000"
+		},
+		"wscache_1H22-normal": {
+			"Read_BW_PER_TB_MIN": ">215000",
+			"Write_BW_PER_TB_MIN": ">90000",
+			"Trim_BW_PER_TB_MIN": ">0",
+			"P99_Read_Latency_MAX": "<10000",
+			"P99.99_Read_Latency_MAX": "<15000",
+			"P99.9999_Read_Latency_MAX": "<20000",
+			"Max_Read_Latency_MAX": "<30000",
+			"P99.99_Write_Latency_MAX": "<50000",
+			"P99.9999_Write_Latency_MAX": "<85000",
+			"Max_Write_Latency_MAX": "<100000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"prep": {
+		"prep_flash": {
+			"Read_BW_MAX": "<1",
+			"Write_BW_MIN": ">0"
+		}
+	},
+	"TrimRate": {
+		"64MTRIM": {
+			"Trim_BW_PER_TB_MIN": ">50000000",
+			"P99_Trim_Latency_MAX": "<10000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+
+		},
+		"3GTRIM": {
+			"Trim_BW_PER_TB_MIN": ">500000000",
+			"P99_Trim_Latency_MAX": "<10000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+
+		}
+	},
+	"HE_Flash_Short_wTRIM_Sweep": {
+		"HE_Flash_Short_wTRIM_Sweep_Global": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000"
+		},
+		"4K_L2R6DWPD_wTRIM": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"4K_L2R9DWPD_wTRIM_normal": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"4K_L2R9DWPD_wTRIM_highread": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"4K_L2R9DWPD_wTRIM_highwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"4K_L2R9DWPD_wTRIM_highreadwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"4K_L2R9DWPD_wTRIM": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"MyRocks_Heavy_wTRIM": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"MyRocks_Heavy_wTRIM_normal": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"MyRocks_Heavy_wTRIM_highread": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"MyRocks_Heavy_wTRIM_highwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"MyRocks_Heavy_wTRIM_highreadwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"FLeaf_wTRIM": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"FLeaf_wTRIM_normal": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"FLeaf_wTRIM_highread": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"FLeaf_wTRIM_highwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"FLeaf_wTRIM_highreadwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Cache_Sweep_1H22": {
+		"Cache_Sweep_Global": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000"
+		},
+		"B_Cache_normal": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"B_Cache_highread": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"B_Cache_highwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"B_Cache_highreadwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Search_Sweep_1H22": {
+		"Search_Sweep_Global": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000"
+		},
+		"SearchLM_wTRIM": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"SearchLM_wTRIM_normal": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"SearchLM_wTRIM_highread": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"SearchLM_wTRIM_highwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"SearchLM_wTRIM_highreadwrite": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Fio_4C": {
+		"prep_flash": {
+			"Read_BW_MAX": "<1",
+			"Write_BW_MIN": ">0"
+		},
+		"gen_prep_flash": {
+			"Read_BW_MAX": "<1",
+			"Write_BW_MIN": ">0"
+		},
+		"gen_randread": {
+			"Read_IOPS_MIN": ">0"
+		},
+		"gen_randwrite": {
+			"Write_IOPS_MIN": ">0"
+		},
+		"gen_read": {
+			"Read_BW_MIN": ">0"
+		},
+		"gen_write": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_randrw_70_30": {
+			"Read_IOPS_MIN": ">0",
+			"Write_IOPS_MIN": ">0"
+		}
+	},
+	"RandRead_Fio4C": {
+		"prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_randread": {
+			"Read_IOPS_MIN": ">0"
+		}
+	},
+	"RandWrite_Fio4C": {
+		"prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_randwrite": {
+			"Write_IOPS_MIN": ">0"
+		}
+	},
+	"Read_Fio4C": {
+		"prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_read": {
+			"Read_BW_MIN": ">0"
+		}
+	},
+	"Write_Fio4C": {
+		"prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_write": {
+			"Write_BW_MIN": ">0"
+		}
+	},
+	"RandRW_70_30_Fio4C": {
+		"prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_prep_flash": {
+			"Write_BW_MIN": ">0"
+		},
+		"gen_randrw_70_30": {
+			"Read_IOPS_MIN": ">0",
+			"Write_IOPS_MIN": ">0"
+		}
+	},
+	"Fio_4C_boot": {
+		"prep_flash": {
+			"Read_BW_MAX": "<1",
+			"Write_BW_MIN": ">0"
+		},
+		"gen_prep_flash": {
+			"Read_BW_MAX": "<1",
+			"Write_BW_MIN": ">0"
+		},
+		"gen_randread": {
+			"Read_IOPS_MIN": ">50000"
+		},
+		"gen_randwrite": {
+			"Write_IOPS_MIN": ">4000"
+		},
+		"gen_read": {
+			"Read_BW_MIN": ">250000"
+		},
+		"gen_write": {
+			"Write_BW_MIN": ">200000"
+		},
+		"gen_randrw_70_30": {
+			"Read_IOPS_MIN": ">15000",
+			"Write_IOPS_MIN": ">4000"
+		}
+	},
+
+	"UDB_Boot":{
+		"UDB_Boot": {
+			"P99_Read_Latency_MAX": "<5000",
+			"P99.99_Read_Latency_MAX": "<20000",
+			"Max_Read_Latency_MAX": "<500000",
+			"P99.99_Write_Latency_MAX": "<100000",
+			"P99.9999_Write_Latency_MAX": "<200000",
+			"Max_Write_Latency_MAX": "<400000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Warmstorage_HXFS_SSD":{
+		"Warmstorage_HXFS_SSD_LOW": {
+			"P99_Read_Latency_MAX": "<5000",
+			"P99.99_Read_Latency_MAX": "<20000",
+			"Max_Read_Latency_MAX": "<500000",
+			"P99.99_Write_Latency_MAX": "<40000",
+			"P99.9999_Write_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<400000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"Warmstorage_HXFS_SSD_MEDIUM": {
+			"P99_Read_Latency_MAX": "<5000",
+			"P99.99_Read_Latency_MAX": "<20000",
+			"Max_Read_Latency_MAX": "<500000",
+			"P99.99_Write_Latency_MAX": "<40000",
+			"P99.9999_Write_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<400000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"Warmstorage_HXFS_SSD_HIGH": {
+			"P99_Read_Latency_MAX": "<5000",
+			"P99.99_Read_Latency_MAX": "<20000",
+			"Max_Read_Latency_MAX": "<500000",
+			"P99.99_Write_Latency_MAX": "<40000",
+			"P99.9999_Write_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<400000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Twshared_Pkg_Boot":{
+		"twshared-pkg": {
+			"Read_IOPS_MIN": ">210000",
+			"Write_IOPS_MIN": ">600000",
+			"Read_BW_PER_TB_MIN": ">51000",
+			"Write_BW_PER_TB_MIN": ">62000",
+			"P99_Read_Latency_MAX": "<60000",
+			"P99.99_Read_Latency_MAX": "<90000",
+			"Max_Read_Latency_MAX": "<100000",
+			"P99_Write_Latency_MAX": "<30000",
+			"P99.99_Write_Latency_MAX": "<60000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Rsw_Cp_wTRIM":{
+		"rsw_cp_wTRIM": {
+			"Read_IOPS_MIN": ">119000",
+			"Write_IOPS_MIN": ">700000",
+			"Read_BW_PER_TB_MIN": ">27000",
+			"Write_BW_PER_TB_MIN": ">80000",
+			"Trim_BW_PER_TB_MIN": ">60000",
+			"P99_Read_Latency_MAX": "<15000",
+			"P99.99_Read_Latency_MAX": "<30000",
+			"Max_Read_Latency_MAX": "<80000",
+			"P99_Write_Latency_MAX": "<30000",
+			"P99.99_Write_Latency_MAX": "<60000",
+			"Max_Write_Latency_MAX": "<120000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Twi_Iris":{
+		"twi_iris": {
+			"Read_IOPS_MIN": ">420000",
+			"Write_IOPS_MIN": ">65000",
+			"Read_BW_PER_TB_MIN": ">45000",
+			"Write_BW_PER_TB_MIN": ">6000",
+			"Trim_BW_PER_TB_MIN": ">2400",
+			"P99_Read_Latency_MAX": "<10000",
+			"P99.99_Read_Latency_MAX": "<50000",
+			"Max_Read_Latency_MAX": "<150000",
+			"P99_Write_Latency_MAX": "<40000",
+			"P99.99_Write_Latency_MAX": "<200000",
+			"Max_Write_Latency_MAX": "<400000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Idyno_Boot":{
+		"idyno_boot": {
+			"Read_BW_PER_TB_MIN": ">75000",
+			"Write_BW_PER_TB_MIN": ">15000",
+			"Trim_BW_PER_TB_MIN": ">100",
+			"P99_Read_Latency_MAX": "<25000",
+			"P99.99_Read_Latency_MAX": "<50000",
+			"Max_Read_Latency_MAX": "<90000",
+			"P99_Write_Latency_MAX": "<30000",
+			"P99.99_Write_Latency_MAX": "<45000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Stacking":{
+		"stacking": {
+			"Read_BW_PER_TB_MIN": ">120000",
+			"Write_BW_PER_TB_MIN": ">64000",
+			"Trim_BW_PER_TB_MIN": ">18000",
+			"P99_Read_Latency_MAX": "<10000",
+			"P99.99_Read_Latency_MAX": "<50000",
+			"Max_Read_Latency_MAX": "<120000",
+			"P99_Write_Latency_MAX": "<600",
+			"P99.99_Write_Latency_MAX": "<60000",
+			"Max_Write_Latency_MAX": "<350000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Twshared_Pkg_Boot_Full_Sweep":{
+		"twshared-pkg_r1w1t1": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r2w1t1": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r3w1t1": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r1w2t1": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r2w2t1": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r3w2t1": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r1w3t1": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r2w3t1": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r3w3t1": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r1w1t2": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r2w1t2": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r3w1t2": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r1w2t2": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r2w2t2": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r3w2t2": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r1w3t2": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r2w3t2": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r3w3t2": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r1w1t3": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r2w1t3": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r3w1t3": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r1w2t3": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r2w2t3": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r3w2t3": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r1w3t3": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r2w3t3": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"twshared-pkg_r3w3t3": {
+			"Max_Read_Latency_MAX": "<100000",
+			"Max_Write_Latency_MAX": "<250000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"Idyno_Boot_Full_Sweep":{
+		"idyno_boot_r1w1t1": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r2w1t1": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r3w1t1": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r1w2t1": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r2w2t1": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r3w2t1": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r1w3t1": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r2w3t1": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r3w3t1": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r1w1t2": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r2w1t2": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r3w1t2": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r1w2t2": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r2w2t2": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r3w2t2": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r1w3t2": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r2w3t2": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r3w3t2": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r1w1t3": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r2w1t3": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r3w1t3": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r1w2t3": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r2w2t3": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r3w2t3": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r1w3t3": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r2w3t3": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"idyno_boot_r3w3t3": {
+			"Max_Read_Latency_MAX": "<90000",
+			"Max_Write_Latency_MAX": "<60000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"WSF_2H21_8TB": {
+		"WSF_2H21_Global": {
+			"Max_Read_Latency_MAX": "<65000",
+			"Max_Write_Latency_MAX": "<85000"
+		},
+		"wsf-t-normal": {
+			"Read_BW_PER_TB_MIN": ">0",
+			"Write_BW_PER_TB_MIN": ">0",
+			"Trim_BW_PER_TB_MIN": ">0",
+			"P99_Read_Latency_MAX": "<1000000",
+			"P99.99_Read_Latency_MAX": "<1000000",
+			"P99.9999_Read_Latency_MAX": "<1000000",
+			"Max_Read_Latency_MAX": "<1000000",
+			"P99_Write_Latency_MAX": "<1000000",
+			"P99.99_Write_Latency_MAX": "<1000000",
+			"P99.9999_Write_Latency_MAX": "<1000000",
+			"Max_Write_Latency_MAX": "<1000000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		},
+		"wsf-tl-normal": {
+			"Read_BW_PER_TB_MIN": ">112400",
+			"Write_BW_PER_TB_MIN": ">68000",
+			"Trim_BW_PER_TB_MIN": ">41400",
+			"P99_Read_Latency_MAX": "<1000",
+			"P99.99_Read_Latency_MAX": "<4000",
+			"P99.9999_Read_Latency_MAX": "<8000",
+			"Max_Read_Latency_MAX": "<20000",
+			"P99.99_Write_Latency_MAX": "<20000",
+			"P99.9999_Write_Latency_MAX": "<30000",
+			"Max_Write_Latency_MAX": "<50000",
+			"Max_Read_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
+			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
+			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	}
+}

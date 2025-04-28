@@ -5,7 +5,6 @@ import json
 import os
 import re
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.host.host import Host
@@ -49,8 +48,8 @@ class LatencyMonitor:
     def __init__(
         self,
         host: "Host",
-        test_drives: List,
-        test_control: Dict,
+        test_drives: list,
+        test_control: dict,
         log_lm_commands: bool = True,
     ) -> None:
         """Initialize the Latency Monitor Utility class"""
@@ -58,16 +57,16 @@ class LatencyMonitor:
         self.test_drives = test_drives
         self.test_control = test_control
         self.log_lm_commands = log_lm_commands
-        self.latency_outliers: Dict[str, Dict[str, int]] = {}
+        self.latency_outliers: dict[str, dict[str, int]] = {}
 
         self.lmparser = LatencyMonitorLogParser()
         self.dc_lm_validation = self.test_control.get("dc_lm_validation", False)
         self.ocp_lm_commands = self.test_control.get("ocp_lm_commands", False)
-        json_path = "cfg/drive_latency_monitor.json"
+        json_path = "/cfg/drive_latency_monitor.json"
         try:
             abs_path = NVMeDrive.get_target_path()
             latency_monitor_config_path = abs_path + json_path
-            with open(latency_monitor_config_path, "r") as f:
+            with open(latency_monitor_config_path) as f:
                 data = f.read()
                 if data.strip() == "{}":  # check if file contains only {}
                     raise ValueError("Latency monitor json file is empty")
@@ -79,7 +78,7 @@ class LatencyMonitor:
                     error_type=ErrorType.INPUT_ERR,
                 )
 
-    def enable(self, workload: str, working_directory: str) -> List[str]:
+    def enable(self, workload: str, working_directory: str) -> list[str]:
         """
         This method is used to enable latency monitoring on the test drives for the specified workload
         Args:
@@ -286,7 +285,7 @@ class LatencyMonitor:
     def parse_and_validate_results(
         self,
         synth_workload_result_dir: str,
-        lm_enabled_drives: Optional[List[str]] = None,
+        lm_enabled_drives: list[str] | None = None,
         workload: str = "",
     ) -> None:
         """
@@ -360,9 +359,9 @@ class LatencyMonitor:
 
     def validate_results(
         self,
-        output_dict: Dict[str, Dict[str, int]],
+        output_dict: dict[str, dict[str, int]],
         drive: str,
-        lm_field_to_validate: List[str],
+        lm_field_to_validate: list[str],
         workload: str = "",
         block_size: str = "",
     ) -> None:
@@ -389,13 +388,13 @@ class LatencyMonitor:
                             ] = value
                 else:
                     AutovalLog.log_info(
-                        "[%s]: lmparser Verification output %s" % (drive, output)
+                        f"[{drive}]: lmparser Verification output {output}"
                     )
                     for key, value in output_dict[output].items():
                         AutovalUtils.validate_equal(
                             value,
                             0,
-                            msg="[%s]: %s_Latency_Parser_value" % (drive, key),
+                            msg=f"[{drive}]: {key}_Latency_Parser_value",
                             raise_on_fail=False,
                             component=COMPONENT.STORAGE_DRIVE,
                             error_type=ErrorType.LATENCY_ERR,
