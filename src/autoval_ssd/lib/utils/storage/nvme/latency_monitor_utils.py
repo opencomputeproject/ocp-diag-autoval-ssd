@@ -5,6 +5,7 @@ import json
 import os
 import re
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.host.host import Host
@@ -48,8 +49,8 @@ class LatencyMonitor:
     def __init__(
         self,
         host: "Host",
-        test_drives: list,
-        test_control: dict,
+        test_drives: List[NVMeDrive],
+        test_control: Dict[Any, Any],
         log_lm_commands: bool = True,
     ) -> None:
         """Initialize the Latency Monitor Utility class"""
@@ -85,7 +86,7 @@ class LatencyMonitor:
             workload (str): The workload type.
             working_directory (str): The working directory.
         Returns:
-            List[str]: A list of enabled drives.
+            List[str]: A List of enabled drives.
         """
         lm_enabled_drives = []
         lm_flags = ""
@@ -291,17 +292,17 @@ class LatencyMonitor:
         """
         This method is used to get a text file from the synth_workload_result_dir,
         then parse the text file using the lmparse module to get a human-readable JSON file
-        then convert that JSON file to a dict.
+        then convert that JSON file to a Dict.
         Args:
             synth_workload_result_dir (str): The directory containing the workload results.
-            lm_enabled_drives (Optional[List[str]]): The list of drives enabled for latency monitoring. Default is None.
+            lm_enabled_drives (Optional[List[str]]): The List of drives enabled for latency monitoring. Default is None.
             workload (str): The workload type. Default is an empty string.
         Returns:
             None
         Raises:
             TestError: If the block size is not specified in the file name for ioT6 workload.
         """
-        validated_logs: list = []
+        validated_logs: List[str] = []
         if lm_enabled_drives is None:
             lm_enabled_drives = []
         text_path = FioSynthFlashUtils.find_file_paths(
@@ -359,7 +360,7 @@ class LatencyMonitor:
 
     def validate_results(
         self,
-        output_dict: dict[str, dict[str, int]],
+        output_dict: Union[Dict[str, Dict[str, int]], Any],
         drive: str,
         lm_field_to_validate: list[str],
         workload: str = "",
@@ -370,7 +371,7 @@ class LatencyMonitor:
         Args:
             output_dict (Dict): The dictionary containing the lmparser output values.
             drive (str): The drive name.
-            lm_field_to_validate (List[str]): The list of fields to be validated.
+            lm_field_to_validate (List[str]): The List of fields to be validated.
             workload (str): The workload type. Default is an empty string.
             block_size (str): The block size. Default is an empty string.
         Returns:

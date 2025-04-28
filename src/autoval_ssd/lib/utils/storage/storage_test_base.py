@@ -7,7 +7,7 @@ import datetime
 import os
 import re
 import time
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import autoval_ssd.lib.utils.storage.smart_validator as smart_validator
 from autoval.lib.host.component.component import COMPONENT
@@ -798,7 +798,7 @@ class StorageTestBase(TestBase):
         self,
         drives: list[Drive],
         attr: str,
-        value: str | DriveInterface | DriveType,
+        value: Union[str, DriveInterface, DriveType],
     ) -> list[Drive]:
         """
         Return drives in a list that has an attribute equal a provided value

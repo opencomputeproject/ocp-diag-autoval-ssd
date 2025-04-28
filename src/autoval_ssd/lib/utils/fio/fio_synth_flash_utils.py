@@ -8,6 +8,7 @@ import os
 import re
 import time
 from glob import glob
+from typing import Optional
 
 from autoval.lib.host.component.component import COMPONENT
 
@@ -157,7 +158,7 @@ class FioSynthFlashUtils:
         test_drive_filter=None,
         test_drives=None,
         ignore_error: bool = False,
-        lm_enabled_drives: list[str] | None = None,
+        lm_enabled_drives: Optional[list[str]] = None,
     ):
         """
         This is the main function to start the fio_synth_flash.
@@ -354,7 +355,7 @@ class FioSynthFlashUtils:
         results_dir: str,
         synth_workload: str,
         test_drives: list,
-        lm_enabled_drives: list[str] | None = None,
+        lm_enabled_drives: Optional[list[str]] = None,
     ) -> None:
         """Synth Output Validation.
 
@@ -478,7 +479,7 @@ class FioSynthFlashUtils:
         csv_dict: dict,
         drive: str,
         verify_workload: bool,
-        lm_enabled_drives: list[str] | None = None,
+        lm_enabled_drives: Optional[list[str]] = None,
     ) -> None:
         """Compare CSV Json.
 

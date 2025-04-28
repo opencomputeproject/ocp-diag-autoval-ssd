@@ -59,7 +59,7 @@ class NvmeResizeUtil:
 
         def to_bytes(
             self,
-            sweep_param_value: int | float,
+            sweep_param_value: Union[int, float],
             max_bytes: int,
         ) -> int:
             """
@@ -475,7 +475,7 @@ class NvmeResizeUtil:
         drive_list: list[str],
         sweep_param_key: SweepParamKeyEnum,
         sweep_param_unit: SweepParamUnitEnum,
-        sweep_param_value: int | float,
+        sweep_param_value: Union[int, float],
         nvme_id_ctrl_filter: str = "True",
         cycle=1,
         **kwargs,

@@ -6,7 +6,7 @@ import json
 import re
 import time
 from enum import auto, Enum
-from typing import TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING
 
 from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
@@ -52,7 +52,7 @@ class NVMeUtils:
         return NVMeDeviceEnum.INVALID
 
     @staticmethod
-    def get_id_ctrl(host, device_name) -> dict:
+    def get_id_ctrl(host, device_name) -> Dict:
         """
         @param Host : host
         @param String block_name: e.g. nvme1n1 or char_name: eg nvme1
@@ -81,7 +81,7 @@ class NVMeUtils:
         return out
 
     @staticmethod
-    def get_id_ns(host, device_name: str, nsid: int | None = None) -> dict:
+    def get_id_ns(host, device_name: str, nsid: Optional[int] = None) -> Dict:
         """
         Return identify namespace json output.
         @param Host : host
@@ -281,7 +281,7 @@ class NVMeUtils:
         return ns_list
 
     @staticmethod
-    def delete_ns(host, device_name: str, nsid: int | None = None) -> None:
+    def delete_ns(host, device_name: str, nsid: Optional[int] = None) -> None:
         """
         Method to delete a namespace.
         If device_name represents a character device (e.g. nvme1), nsid is mandatory.
@@ -300,8 +300,8 @@ class NVMeUtils:
             )
         cmd = f"nvme delete-ns /dev/{device_name}"
         if nsid is None:
-            nsid = NVMeUtils.list_ns(host, device_name)
-            for i in nsid:
+            nsid_list = NVMeUtils.list_ns(host, device_name)
+            for i in nsid_list:
                 cmd2 = cmd + f" -n {i}"
                 host.run(cmd=cmd2)
         else:
