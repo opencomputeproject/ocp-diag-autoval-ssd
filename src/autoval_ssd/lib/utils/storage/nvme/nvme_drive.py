@@ -160,7 +160,7 @@ class NVMeDrive(Drive):
             pattern = r"^(/.*?)/autoval_ssd/"
             match = re.search(pattern, current_file_path)
             if match:
-                target_path = match.group(0)
+                target_path = match.group(0)[:-1]
         except Exception:
             raise AutovalFileNotFound("The required file path is not found")
         return target_path
