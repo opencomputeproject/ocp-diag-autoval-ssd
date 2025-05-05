@@ -5,7 +5,7 @@ import json
 import os
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.host.host import Host
@@ -49,8 +49,8 @@ class LatencyMonitor:
     def __init__(
         self,
         host: "Host",
-        test_drives: List[NVMeDrive],
-        test_control: Dict[Any, Any],
+        test_drives: list,
+        test_control: dict,
         log_lm_commands: bool = True,
     ) -> None:
         """Initialize the Latency Monitor Utility class"""
@@ -286,7 +286,7 @@ class LatencyMonitor:
     def parse_and_validate_results(
         self,
         synth_workload_result_dir: str,
-        lm_enabled_drives: list[str] | None = None,
+        lm_enabled_drives: Optional[list[str]] = None,
         workload: str = "",
     ) -> None:
         """
@@ -302,7 +302,7 @@ class LatencyMonitor:
         Raises:
             TestError: If the block size is not specified in the file name for ioT6 workload.
         """
-        validated_logs: List[str] = []
+        validated_logs: list = []
         if lm_enabled_drives is None:
             lm_enabled_drives = []
         text_path = FioSynthFlashUtils.find_file_paths(
@@ -360,7 +360,7 @@ class LatencyMonitor:
 
     def validate_results(
         self,
-        output_dict: Union[Dict[str, Dict[str, int]], Any],
+        output_dict: Union[dict[str, dict[str, int]], Any],
         drive: str,
         lm_field_to_validate: list[str],
         workload: str = "",
