@@ -588,7 +588,7 @@ class FioRunner(TestUtilsBase):
             file is not located in a path with a lib/ subdirectory.
         """
         current_file_path = os.path.abspath(__file__)
-        pattern = r"^(/.*?/lib)"
+        pattern = r"^(/.*?)/autoval_ssd/"
         match = re.search(pattern, current_file_path)
         if not match:
             raise TestError(
@@ -596,8 +596,8 @@ class FioRunner(TestUtilsBase):
                 f"Directory 'lib/' missing from path '{current_file_path}' of current file '{__file__}'.\n"
                 "This is likely caused by an AutoVal build or packaging issue."
             )
-        lib_path = match.group(1)
-        return os.path.join(lib_path, "utils/jobfile_templates")
+        lib_path = match.group(0)[:-1]
+        return os.path.join(lib_path, "lib/utils/jobfile_templates")
 
     def _create_file(self, device: str, _file: str, _size: str):
         """
