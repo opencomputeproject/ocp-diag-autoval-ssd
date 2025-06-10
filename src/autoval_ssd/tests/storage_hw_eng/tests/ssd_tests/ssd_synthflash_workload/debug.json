@@ -1,0 +1,8 @@
+{
+    "DEBUG" : 1,
+    "devices" : ["ALL"],
+    "workload_suites"  : ["Debug1", "Debug2"],
+    "wr_cache" : true,
+    "num_runs" : 2,
+    "flash_config_logging" : true
+}

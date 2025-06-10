@@ -1,0 +1,52 @@
+{
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "sweep_param_key": "overprovisioning",
+    "sweep_param_unit": "percent",
+    "sweep_param_values": [75],
+    "cycle_count": 1,
+    "fdp_setup": true,
+    "validate_drive_fw_update": false,
+    "force_update" : true,
+    "fw_slots": [1],
+    "nvme_update_actions":[1],
+    "power_trigger": true,
+    "skip_iops_validation": true,
+    "workloads":{
+      "write": {
+          "basic_write": {
+              "template": "basic_write.fio",
+              "args": {
+                  "SIZE": "100%",
+                  "DEPTH": 128,
+                  "RUNTIME": "5m",
+                  "VERIFY": "md5",
+                  "RW": "write"
+              }
+          }
+      },
+      "read": {
+          "basic_read": {
+              "template": "basic_read.fio",
+              "args": {
+                  "SIZE": "100%",
+                  "DEPTH": 128,
+                  "RUNTIME": "5m",
+                  "VERIFY": "md5",
+                  "RW": "read"
+              }
+          }
+      },
+      "verify": {
+          "basic_verify": {
+              "template": "basic_verify.fio",
+              "args": {
+                  "RW": "read",
+                  "VERIFY": "md5",
+                  "SIZE": "100%",
+                  "DEPTH": 128
+              }
+          }
+      }
+    }
+  }

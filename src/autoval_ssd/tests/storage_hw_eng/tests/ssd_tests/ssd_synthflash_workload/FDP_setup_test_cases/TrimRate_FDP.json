@@ -1,0 +1,24 @@
+{
+    "collect_smart_log": true,
+    "collect_drive_data": true,
+    "synth_verify": true,
+
+    "DEBUG" : 1,
+    "timeout" : 3600,
+
+    "workload_configs"  :
+    [
+        {
+            "perform_resize": false,
+            "perform_raid": false,
+            "set_power_state": true,
+
+            "devices" : ["ALL"],
+            "workload_suites"  : ["TrimRate"]
+        }
+        ],
+    "wr_cache" : true,
+    "num_runs" : 1,
+    "flash_config_logging" : true,
+    "fdp_setup": true
+}

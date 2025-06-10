@@ -1,0 +1,11 @@
+{
+    "reclaim_groups": {
+        "value": 1
+    },
+    "reclaim_unit_handles": {
+        "value": 8
+    },
+    "namespaces_supported": {
+        "value": 2
+    }
+}

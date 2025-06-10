@@ -1,0 +1,25 @@
+{
+    "fstype": "xfs",
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "max_latency": 15,
+    "precondition_loops": 0,
+
+    "collect_smart_log": true,
+    "collect_drive_data": true,
+    "timeout" : 518400,
+
+    "perform_resize": true,
+        "sweep_param_key": "usercapacity",
+        "sweep_param_unit": "num_TB",
+        "sweep_param_value": 1,
+        "cycle_count": 1,
+
+    "set_power_state": true,
+    "devices" : ["ALL"],
+
+    "trimrate": true,
+    "workload": "prep",
+    "secure_erase_option": 0,
+    "iogo_runtime": 30
+}

@@ -2,6 +2,7 @@
 
 # pyre-unsafe
 """Class for drive"""
+
 import re
 from enum import Enum
 
@@ -336,3 +337,9 @@ class Drive:
         in workoad targets then True is returned.
         """
         return False
+
+    def update_firmware(self, *args, **kwargs) -> None:
+        """
+        Update Firmware for Drives. Should be overridden in sub-classes
+        """
+        return

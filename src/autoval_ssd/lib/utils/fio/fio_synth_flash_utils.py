@@ -2,12 +2,13 @@
 
 # pyre-unsafe
 """Utils for FioSynthFlash test"""
+
 import json
 import os
 import re
 import time
 from glob import glob
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from autoval.lib.host.component.component import COMPONENT
 
@@ -19,7 +20,6 @@ from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval.lib.utils.file_actions import FileActions
 from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
-from autoval_ssd.lib.utils.system_utils import SystemUtils
 
 
 class FioSynthFlashUtils:
@@ -43,35 +43,27 @@ class FioSynthFlashUtils:
 
     @staticmethod
     def tool_setup(host) -> None:
-        AutovalLog.log_info("Installing fiosynth")
-        SystemUtils.install_rpms(host, ["fiosynth"])
+        AutovalLog.log_info("Checking for fiosynth installation")
         FioSynthFlashUtils.get_version(host)
 
     @staticmethod
     def get_version(host) -> None:
-        out = host.run("fiosynth -v")
+        out = host.run("fiosynth -v", ignore_status=True)
         pattern = r"\d+\.\d+\.*\d*"
         match = re.search(pattern, out)
         if match:
             version = match.group(0)
             AutovalLog.log_info("+++Running fiosynth version: %s" % version)
         else:
-            AutovalLog.log_info("fiosynth version not detected: Reinstalling")
-            SystemUtils.install_rpms(host, ["fiosynth"], force_install=True)
-            out = host.run("fiosynth -v")
-            match2 = re.search(pattern, out)
-            if match2:
-                version = match2.group(0)
-                AutovalLog.log_info("+++Running fiosynth version: %s" % version)
-            else:
-                raise TestError(
-                    "fiosynth version not detected: %s" % out,
-                    component=COMPONENT.STORAGE_DRIVE,
-                    error_type=ErrorType.TOOL_ERR,
-                )
+            raise TestError(
+                "fiosynth not installed or version not detected. "
+                "Please install it manually from https://github.com/facebookincubator/FioSynth?tab=readme-ov-file#installing-fiosynth",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.TOOL_ERR,
+            )
 
     @staticmethod
-    def find_csv_files(host, results_dir: str) -> List:
+    def find_csv_files(host, results_dir: str) -> list:
         """
         Find the output csvfile from fio_synth_flash. Returns a list
         of found csvfiles from that directory.
@@ -90,7 +82,7 @@ class FioSynthFlashUtils:
         return found
 
     @staticmethod
-    def find_errors(host, results_dir: str, ignore_error: bool = False) -> List:
+    def find_errors(host, results_dir: str, ignore_error: bool = False) -> list:
         """
         Find error files and check if there is error in result by going through
         each json files from the result directory.
@@ -166,7 +158,7 @@ class FioSynthFlashUtils:
         test_drive_filter=None,
         test_drives=None,
         ignore_error: bool = False,
-        lm_enabled_drives: Optional[List[str]] = None,
+        lm_enabled_drives: Optional[list[str]] = None,
     ):
         """
         This is the main function to start the fio_synth_flash.
@@ -291,7 +283,7 @@ class FioSynthFlashUtils:
         )
 
     @staticmethod
-    def csv_output_validation(host, resultsdir: str) -> List:
+    def csv_output_validation(host, resultsdir: str) -> list:
         """
         Validate the fio_synth output by checking if csv files exist
         within the result directory.
@@ -311,7 +303,7 @@ class FioSynthFlashUtils:
     @staticmethod
     def run_fio_synth_cmd(
         host, cmd: str, resultsdir: str, synth_options=None
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         """
         run fio_synth command
 
@@ -331,7 +323,7 @@ class FioSynthFlashUtils:
             )
         except Exception as e:
             raise TestError(
-                "[FioSynthFlash Log] Failed to run %s %s" % (cmd, e),
+                f"[FioSynthFlash Log] Failed to run {cmd} {e}",
                 component=COMPONENT.SYSTEM,
                 error_type=ErrorType.SYSTEM_ERR,
             )
@@ -362,8 +354,8 @@ class FioSynthFlashUtils:
         host,
         results_dir: str,
         synth_workload: str,
-        test_drives: List,
-        lm_enabled_drives: Optional[List[str]] = None,
+        test_drives: list,
+        lm_enabled_drives: Optional[list[str]] = None,
     ) -> None:
         """Synth Output Validation.
 
@@ -392,7 +384,10 @@ class FioSynthFlashUtils:
                 if drive.is_ocp_2_6_drive():
                     filename = "Workload_Loop_Targets_OCP2.6.json"
                     break
-        nvme_cfg_path = os.path.join(NVMeDrive.get_target_path(), "cfg", filename)
+        cfg_dir = "/cfg/"
+        relative_cfg_file_path = os.path.join(cfg_dir, filename)
+        abs_path = NVMeDrive.get_target_path()
+        nvme_cfg_path = abs_path + relative_cfg_file_path
         benchmark_dict = FileActions.read_data(nvme_cfg_path, json_file=True)
         csv_files = ""
         fio_results_dir = FioSynthFlashUtils.find_file_paths(
@@ -404,7 +399,9 @@ class FioSynthFlashUtils:
         else:
             global_target = synth_workload + "_Global"
         AutovalLog.log_info(
-            "[%s]: global_target %s synth_workload" % (global_target, synth_workload)
+            "[{}]: global_target {} synth_workload".format(
+                global_target, synth_workload
+            )
         )
         # try to find the results dir with time-stamp
         for fio_load_dir in fio_results_dir:
@@ -478,11 +475,11 @@ class FioSynthFlashUtils:
         host,
         global_target: str,
         synth_workload: str,
-        benchmark_dict: Dict[str, Dict],
-        csv_dict: Dict,
+        benchmark_dict: dict[str, dict],
+        csv_dict: dict,
         drive: str,
         verify_workload: bool,
-        lm_enabled_drives: Optional[List[str]] = None,
+        lm_enabled_drives: Optional[list[str]] = None,
     ) -> None:
         """Compare CSV Json.
 
@@ -552,7 +549,7 @@ class FioSynthFlashUtils:
                     error_type=ErrorType.INPUT_ERR,
                 )
             AutovalLog.log_info(
-                "[%s]: The synth Verification output:  %s" % (drive, fio_load)
+                f"[{drive}]: The synth Verification output:  {fio_load}"
             )
             tb_target_scaling_factor = FioSynthFlashUtils.get_tb_target_scaling_factor(
                 host, drive
@@ -599,7 +596,7 @@ class FioSynthFlashUtils:
                     )
 
     @staticmethod
-    def parse_verification_key(key: str) -> Tuple[str, str, bool]:
+    def parse_verification_key(key: str) -> tuple[str, str, bool]:
         key, bound = key.rsplit("_", 1)
         if bound not in {"MAX", "MIN"}:
             raise Exception(f"Unexpected bound '{bound}' in key '{key}'")
@@ -608,7 +605,7 @@ class FioSynthFlashUtils:
         return (key, bound, is_per_tb)
 
     @staticmethod
-    def find_file_paths(host: Host, results_dir: str, file_extension: str) -> List[str]:
+    def find_file_paths(host: Host, results_dir: str, file_extension: str) -> list[str]:
         """Return a list of paths matching file extension provided.
 
         Note:  If file extension isn't one of the following, then *all* files will be returned:
@@ -668,7 +665,7 @@ class FioSynthFlashUtils:
                     result_for_drive = match.group()
                 else:
                     raise TestError(
-                        "%s not in CSV Files: %s" % (work_load, csv_file),
+                        f"{work_load} not in CSV Files: {csv_file}",
                         component=COMPONENT.SYSTEM,
                         error_type=ErrorType.SYSTEM_ERR,
                     )

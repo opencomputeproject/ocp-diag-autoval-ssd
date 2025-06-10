@@ -6,7 +6,7 @@ import json
 import re
 import time
 from enum import auto, Enum
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING
 
 from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
@@ -157,10 +157,10 @@ class NVMeUtils:
             drive_data = [dr for dr in nvme_list if dr["DevicePath"] == path].pop()
         except IndexError:
             raise TestError(
-                "Unable to find DevicePath for %s in %s" % (block_name, nvme_list)
+                f"Unable to find DevicePath for {block_name} in {nvme_list}"
             )
         if field not in drive_data:
-            raise TestError("Unable to find %s in %s" % (field, drive_data))
+            raise TestError(f"Unable to find {field} in {drive_data}")
         if isinstance(drive_data[field], str):
             return drive_data[field].strip()
         return drive_data[field]
@@ -194,7 +194,7 @@ class NVMeUtils:
         host, device, secure_erase_option, block_size=None, nvme_format_args=None
     ) -> None:
         """Format nvme drives"""
-        cmd = "nvme format /dev/%s -s %s -r" % (device, secure_erase_option)
+        cmd = f"nvme format /dev/{device} -s {secure_erase_option} -r"
         # Add the option to set block size during drive format
         if block_size:
             cmd += f" -b {block_size}"
@@ -300,8 +300,8 @@ class NVMeUtils:
             )
         cmd = f"nvme delete-ns /dev/{device_name}"
         if nsid is None:
-            nsid = NVMeUtils.list_ns(host, device_name)
-            for i in nsid:
+            nsid_list = NVMeUtils.list_ns(host, device_name)
+            for i in nsid_list:
                 cmd2 = cmd + f" -n {i}"
                 host.run(cmd=cmd2)
         else:
@@ -464,8 +464,8 @@ class NVMeUtils:
 
     @staticmethod
     def get_namespace_support_drive_list(
-        host: "Host", drive_list: List[str]
-    ) -> List[str]:
+        host: "Host", drive_list: list[str]
+    ) -> list[str]:
         """
         Method to check if drive suppors Namespace Management.
         Parametrs
@@ -530,8 +530,68 @@ class NVMeUtils:
         @param: string : drive
         @return integer
         """
-        cmd = "nvme set-feature /dev/%s -f 0x10 --value %s" % (drive, hex(updated_tmt))
+        cmd = "nvme set-feature /dev/{} -f 0x10 --value {}".format(
+            drive, hex(updated_tmt)
+        )
         output = host.run(cmd, ignore_status=True)
         if "INVALID_FIELD" not in output:
             return True
         return False
+
+    @staticmethod
+    def set_fdp(host, drive, enable: bool = True) -> bool:
+        """
+        Method to set the fdp feature on the drive.
+
+        Args:
+            host: The host object.
+            drive: The drive name.
+            enable: Whether to enable or disable the feature. Defaults to True.
+
+        Returns:
+            bool: True if the command was successful, False otherwise.
+        """
+        control_value = 1 if enable else 0
+        cmd = f"nvme set-feature /dev/{drive} -f 0x1D -c {control_value} -s"
+        output = host.run(cmd, ignore_status=True)
+        if "INVALID_FIELD" not in output:
+            return True
+        return False
+
+    @staticmethod
+    def get_fdp_status(host, drive) -> bool:
+        """
+        Method to get the fdp feature status on the drive.
+
+        Args:
+            host: The host object.
+            drive: The drive name.
+
+        Returns:
+            bool: True if the feature is enabled, False otherwise.
+        """
+        cmd = f"nvme get-feature /dev/{drive} -f 0x1D -H"
+        output = host.run(cmd, ignore_status=True)
+
+        if "Current value:" in output:
+            current_value = output.split("Current value:")[1].strip()
+            return "1" in current_value
+
+        return False
+
+    @staticmethod
+    def compare_versions(expected_version: str, current_version: str) -> bool:
+        """
+        Compares two nvme version strings to determine if the current version is greater than or equal to the expected version.
+
+        Args:
+            expected_version: A string representing the expected version in the format "major.minor[.patch]".
+            current_version: A string representing the current version in the format "major.minor[.patch]".
+
+        Returns:
+            A boolean indicating whether the current version is greater than or equal to the expected version.
+        """
+
+        parts1 = [int(part) for part in expected_version.split(".")[:2]]
+        parts2 = [int(part) for part in current_version.split(".")[:2]]
+        return parts2 >= parts1

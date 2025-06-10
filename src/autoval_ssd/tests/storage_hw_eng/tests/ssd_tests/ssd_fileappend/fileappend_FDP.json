@@ -1,0 +1,26 @@
+{
+    "drive_type": "ssd",
+    "ignore_smart": true,
+    "drive_interface": "nvme",
+    "collect_smart_log": true,
+    "collect_drive_data": true,
+
+    "DEBUG" : 1,
+    "timeout" : 518400,
+
+    "perform_resize": false,
+        "sweep_param_key": "usercapacity",
+        "sweep_param_unit": "num_TB",
+        "sweep_param_value": 1.5,
+        "cycle_count": 1,
+
+    "set_power_state": true,
+
+    "devices" : ["ALL"],
+    "file_sizes_mb": [1024, 2048],
+
+    "wr_cache" : true,
+    "num_runs" : 1,
+    "flash_config_logging" : true,
+    "fdp_setup": true
+}
