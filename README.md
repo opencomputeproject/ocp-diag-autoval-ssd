@@ -105,3 +105,12 @@ $ python -m autoval.autoval_test_runner autoval_ssd.tests.nvme_cli.nvme_cli \
     --config ./hosts.json \
     --test_control ~/bin/ocp-diag-autoval-ssd/autoval_ssd/tests/nvme_cli/control.json
 ```
+
+### Test Suites
+Test suites containing a variety of tests with different configurations are included and can be run using the command below:
+```bash
+$ export SITE_SETTINGS="path/to/site_settings.json"
+$ python -m autoval.autoval_test_runner \
+    --suite ocp-diag-autoval-ssd/src/autoval_ssd/cfg/test_suites/sanity_ussdt_on_diffs.yaml \
+    --config ./hosts.json
+```
