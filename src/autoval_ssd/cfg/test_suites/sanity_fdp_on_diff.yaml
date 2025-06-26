@@ -1,0 +1,715 @@
+- name: SSD_Cachebench_FDP
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      DEBUG: 1
+      collect_smart_log: false
+      collect_drive_data: false
+      timeout: 518400
+      update_JSON_config: true
+      pass_fail_verify: true
+      ocp_lm_commands: true
+      workload_configs:
+      - perform_resize: false
+        sweep_param_key: usercapacity
+        sweep_param_unit: num_TB
+        sweep_param_value: 1.5
+        cycle_count: 1
+        perform_raid: false
+        raid_details:
+        - devices:
+          - nvme1n1
+          - nvme2n1
+          values:
+            create: /dev/md0
+            level: '0'
+        - devices:
+          - nvme3n1
+          - nvme4n1
+          values:
+            create: /dev/md1
+            level: '1'
+        power_state: true
+        set_power_state: 8
+        workload_suites:
+        - name: MemCache
+          workload_folder_path: ssd_perf/kvcache_l2_wc
+          workload_file_name: config.json
+          path: ssd_perf/kvcache_l2_wc/config.json
+          parameters_override:
+            cache_config.nvmCachePaths:
+            - /dev/nvme1n1
+            - /dev/nvme2n1
+            - /dev/nvme3n1
+            - /dev/nvme4n1
+            cache_config.writeAmpDeviceList:
+            - nvme1n1
+            - nvme2n1
+            - nvme3n1
+            - nvme4n1
+            cache_config.nvmCacheSizeMB: 932000
+        - name: TaoLeader
+          workload_folder_path: ssd_perf/graph_cache_leader
+          workload_file_name: config.json
+          path: ssd_perf/graph_cache_leader/config.json
+          parameters_override:
+            cache_config.nvmCachePaths:
+            - /dev/nvme1n1
+            - /dev/nvme2n1
+            - /dev/nvme3n1
+            - /dev/nvme4n1
+            cache_config.writeAmpDeviceList:
+            - nvme1n1
+            - nvme2n1
+            - nvme3n1
+            - nvme4n1
+            cache_config.nvmCacheSizeMB: 932000
+      wr_cache: true
+      num_runs: 1
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 518400
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_cachebench.ssd_cachebench_workload
+- name: SSD_Fileappend_FDP
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      ignore_smart: true
+      drive_interface: nvme
+      collect_smart_log: true
+      collect_drive_data: true
+      DEBUG: 1
+      timeout: 518400
+      perform_resize: false
+      sweep_param_key: usercapacity
+      sweep_param_unit: num_TB
+      sweep_param_value: 1.5
+      cycle_count: 1
+      set_power_state: true
+      devices:
+      - ALL
+      file_sizes_mb:
+      - 1024
+      - 2048
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 518400
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_fileappend.ssd_fileappend
+- name: ssd_iogo_FDP
+  runner: autoval
+  args:
+    test_params:
+      fstype: xfs
+      drive_type: ssd
+      drive_interface: nvme
+      max_latency: 15
+      precondition_loops: 0
+      collect_smart_log: true
+      collect_drive_data: true
+      timeout: 518400
+      perform_resize: true
+      sweep_param_key: usercapacity
+      sweep_param_unit: num_TB
+      sweep_param_value: 1
+      cycle_count: 1
+      set_power_state: true
+      devices:
+      - ALL
+      trimrate: true
+      workload: prep
+      secure_erase_option: 0
+      iogo_runtime: 30
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 518400
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_iogo.ssd_iogo
+- name: SSD_Synthflash_Twshared_Pkg_Boot_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 10164
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Twshared_Pkg_Boot
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_WSF_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 70500
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - WSF
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 70500
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_Stacking_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 16104
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Stacking
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_Rsw_Cp_wTRIM_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 16104
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Rsw_Cp_wTRIM
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_Twi_Iris_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 16236
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Twi_Iris
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_Idyno_Boot_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 10164
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Idyno_Boot
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 10164
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_Idyno_Boot_Full_Sweep_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 116556
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Idyno_Boot_Full_Sweep
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 116556
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_UDB_Boot_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 5280
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - UDB_Boot
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_TrimRate_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 3600
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - TrimRate
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_Search_Sweep_1H22_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 79000
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Search_Sweep_1H22
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 79000
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_WSF_1H22_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 36500
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - WSF_1H22
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 36500
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_WSF_2H21_8TB_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 70500
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - WSF_2H21_8TB
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 70500
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_Warmstorage_HXFS_SSD_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 8448
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Warmstorage_HXFS_SSD
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_WSCACHE_1H22_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 47500
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - WSCACHE_1H22
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 47500
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_Twshared_Pkg_Boot_Full_Sweep_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 116556
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Twshared_Pkg_Boot_Full_Sweep
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 116556
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: SSD_Synthflash_Search_1H22_FDP
+  runner: autoval
+  args:
+    test_params:
+      collect_smart_log: true
+      collect_drive_data: true
+      synth_verify: true
+      DEBUG: 1
+      timeout: 12000
+      workload_configs:
+      - perform_resize: false
+        perform_raid: false
+        set_power_state: true
+        devices:
+        - ALL
+        workload_suites:
+        - Search_1H22
+      wr_cache: true
+      num_runs: 1
+      flash_config_logging: true
+      fdp_setup: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 12000
+  cmd: autoval_ssd.tests.storage_hw_eng.tests.ssd_tests.ssd_synthflash_workload.ssd_synthflash_workload
+- name: NVME_NS_Resize_fdp_resize
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      sweep_param_key: overprovisioning
+      sweep_param_unit: percent
+      sweep_param_values:
+      - 75
+      cycle_count: 1
+      fdp_setup: true
+      validate_drive_fw_update: false
+      force_update: true
+      fw_slots:
+      - 1
+      nvme_update_actions:
+      - 1
+      power_trigger: true
+      skip_iops_validation: true
+      workloads:
+        write:
+          basic_write:
+            template: basic_write.fio
+            args:
+              SIZE: 100%
+              DEPTH: 128
+              RUNTIME: 5m
+              VERIFY: md5
+              RW: write
+        read:
+          basic_read:
+            template: basic_read.fio
+            args:
+              SIZE: 100%
+              DEPTH: 128
+              RUNTIME: 5m
+              VERIFY: md5
+              RW: read
+        verify:
+          basic_verify:
+            template: basic_verify.fio
+            args:
+              RW: read
+              VERIFY: md5
+              SIZE: 100%
+              DEPTH: 128
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.nvme_ns_resize.nvme_ns_resize
+- name: NVME_NS_Resize_fdp_tooling
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      sweep_param_key: overprovisioning
+      sweep_param_unit: percent
+      sweep_param_values:
+      - 75
+      cycle_count: 1
+      fdp_setup: true
+      validate_tooling: true
+      skip_iops_validation: true
+      run_definition:
+        filesystem_io:
+          template: filesystem_template.job
+          args:
+            NAME: fio_nvme
+            RW: write
+            SIZE: 10G
+            RUNTIME: 60
+            DEPTH: 128
+            MIXWRITE: 50
+            MIXREAD: 50
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.nvme_ns_resize.nvme_ns_resize
+- name: NVMECLI_fdp
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      check_crypto_erase: false
+      include_boot_drive: false
+      fdp_setup: true
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.nvme_cli.nvme_cli

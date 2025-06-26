@@ -1,0 +1,640 @@
+- name: NVME_NS_Resize_OP
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 1
+      drive_interface: nvme
+      drive_type: ssd
+      revert_sweep_param_key: usercapacity
+      revert_sweep_param_unit: num_TB
+      run_definition:
+        filesystem_io:
+          args:
+            BLKSIZE: 4K
+            DEPTH: 128
+            MIXREAD: 50
+            MIXWRITE: 50
+            NAME: fio_nvme
+            RUNTIME: 60
+            RW: write
+            SIZE: 10G
+          template: filesystem_template.job
+      skip_iops_validation: true
+      sweep_param_key: overprovisioning
+      sweep_param_unit: percent
+      sweep_param_values:
+        - 7
+        - 20
+        - 28
+        - 50
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 10800
+  cmd: autoval_ssd.tests.nvme_ns_resize.nvme_ns_resize
+- name: namespace_utilization
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      cycle: 3
+      expected_nuse_size: 2621440
+      nvme_format_timeout: 1200
+      run_definition:
+        write:
+          template: basic_write.fio
+          args:
+            BLKSIZE: 256k
+            SIZE: 10GB
+            DEPTH: 32
+            RUNTIME: "3600"
+            VERIFY: md5
+            DO_VERIFY: 0
+            RW: write
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.namespace_utilization_test.namespace_utilization_test
+- name: HE_Flash_Short_wTRIM_1H22_OCP2.6
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      fio_synth_params:
+        ignore_error: true
+        parallel: true
+      test_drive_filter: true
+      workload:
+        "0": HE_Flash_Short_wTRIM_1H22
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 86400
+  cmd: autoval_ssd.tests.fio_synth_flash.fio_synth_flash
+- name: trimrate_test
+  runner: autoval
+  args:
+    test_params:
+      drive_interface: nvme
+      drive_type: ssd
+      fstype: xfs
+      max_latency: 15
+      precondition_loops: 2
+      secure_erase_option: 0
+      trimrate: true
+      workload: TrimRate
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.iogo.iogo
+- name: Flash_Data_FioFB_FioStress_WithPeriodicDriveMonitorSideband_6Hours_Local
+  runner: autoval
+  args:
+    test_params:
+      enable_periodic_drive_monitor: true
+      only_sideband_cmds: true
+      periodic_drive_monitor_interval: 1
+      run_definition:
+        randrw:
+          args:
+            BLKSIZE: 8k
+            IODEPTH: 32
+            RUNTIME: 6h
+            SIZE: 100%
+          precondition_loops: 2
+          template: stress_fio.fio
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 25800
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: PCIe_Bit_Error_Ratio__BER_
+  runner: autoval
+  args:
+    test_params:
+      drive_interface: nvme
+      drive_type: ssd
+      fio_timeout: 216000
+      nvme_delay: 250
+      run_definition:
+        bit_error_io:
+          args:
+            BLK_ALIGN: 128K
+            BLK_SIZE: 128K
+            LOOPS: 1
+            NAME: ReadWriteSeq
+            RDWR: readwrite
+            RWMIX_READ: 50
+            RWMIX_WRITE: 50
+            SIZE: 143750G
+          template: bit_error_ratio.fio
+      runtime: 900
+      switchtec_delay: 720
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 324000
+  cmd: autoval_ssd.tests.ber_test.ber_test
+- name: fio_fb_stress_6h_with_periodic_drive_monitor
+  runner: autoval
+  args:
+    test_params:
+      enable_periodic_drive_monitor: true
+      run_definition:
+        randrw:
+          args:
+            BLKSIZE: 8k
+            IODEPTH: 32
+            RUNTIME: 6h
+            SIZE: 100%
+          precondition_loops: 2
+          template: stress_fio.fio
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: DriveDataIntegrity10DcCycleUngracefulLocal
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: warm
+      drive_type: ssd
+      remote_fio: false
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
+- name: flash_fsync_test
+  runner: autoval
+  args:
+    test_params:
+      testname: fsync_test
+      drive_type: ssd
+      template: prep_flash.fio
+      pre_condition_cycle: 1
+      run_definition:
+        BLKSIZE: 128K
+        DEPTH: 32
+        LOOPS: 0
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.fsync.fsync
+- name: iogo_test
+  runner: autoval
+  args:
+    test_params:
+      fstype: xfs
+      drive_type: ssd
+      drive_interface: nvme
+      max_latency: 15
+      precondition_loops: 2
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.iogo.iogo
+- name: DriveDataIntegrity10dcCycleNotifiedLocal
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: dc
+      drive_type: ssd
+      remote_fio: false
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
+- name: nvme_resize_ns_usercap_TB_sweep
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      sweep_param_key: usercapacity
+      sweep_param_unit: num_TB
+      sweep_param_values:
+        "0": 0.5
+      nvme_id_ctrl_filter: nvme_id_ctrl["tnvmcap"] >= 536870912000
+      cycle_count: 1
+      revert_sweep_param_key: overprovisioning
+      revert_sweep_param_unit: percent
+      revert_sweep_param_values:
+        "0": 50
+      skip_iops_validation: true
+      run_definition:
+        filesystem_io:
+          template: filesystem_template.job
+          args:
+            NAME: fio_nvme
+            RW: write
+            BLKSIZE: 4K
+            SIZE: 10G
+            RUNTIME: 60
+            DEPTH: 128
+            MIXWRITE: 50
+            MIXREAD: 50
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.nvme_ns_resize.nvme_ns_resize
+- name: power_cycle_1_with_flush_with_fs_ext4
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      nvme_flush: true
+      skip_iops_validation: true
+      power_trigger: false
+      iteration_count: 1
+      workloads:
+        nvme_flush_write:
+          nvme_flush:
+            template: basic_write.fio
+            filesystem_type: ext4
+            filesystem_options: ""
+            filesystem: true
+            args:
+              BLKSIZE: 4k
+              SIZE: 100%
+              DEPTH: 128
+              RUNTIME: 10m
+              VERIFY: md5
+              RW: randwrite
+        nvme_flush_read:
+          nvme_flush:
+            template: basic_read.fio
+            filesystem_type: ext4
+            filesystem_options: ""
+            filesystem: true
+            skip_fs: true
+            args:
+              BLKSIZE: 4k
+              SIZE: 100%
+              DEPTH: 128
+              RUNTIME: 10m
+              VERIFY: md5
+              RW: randread
+        nvme_flush_verify:
+          nvme_flush:
+            template: basic_verify.fio
+            filesystem_type: ext4
+            filesystem_options: ""
+            filesystem: true
+            skip_fs: true
+            args:
+              RW: randread
+              BLKSIZE: 4k
+              SIZE: 100%
+              DEPTH: "128"
+              VERIFY: md5
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.fio_internal_flush.fio_internal_flush
+- name: NVMECLI
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      check_crypto_erase: false
+      include_boot_drive: true
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.nvme_cli.nvme_cli
+- name: Storage_Data_Collector
+  runner: autoval
+  args:
+    test_params:
+      run_definition:
+        randrw:
+          template: stress_fio.fio
+          args:
+            RUNTIME: 30m
+            BLKSIZE: 8k
+            SIZE: 100%
+            IODEPTH: "32"
+      skip_iops_validation: true
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: drive_md5_verify_fs
+  runner: autoval
+  args:
+    test_params:
+      skip_fs: false
+      cycle_count: 1
+      cycle_type_list:
+        "0": warm
+      percent_write_size: 10
+      filesystem: true
+      drive_type: ssd
+      serialize_overlap: 1
+      write_fio:
+        ssd_md5:
+          template: basic_write.fio
+          filesystem_type: ext4
+          filesystem_options: ""
+          filesystem: true
+          args:
+            NAME: fio_filesystem_test
+            BLKSIZE: 128k
+            SIZE: 100g
+            DEPTH: 128
+            RUNTIME: 1h
+            RW: randwrite
+            VERIFY: md5
+      read_fio:
+        ssd_md5:
+          template: basic_read.fio
+          filesystem: true
+          skip_fs: true
+          args:
+            NAME: fio_filesystem_test
+            BLKSIZE: 128k
+            SIZE: 100g
+            DEPTH: 128
+            RUNTIME: 1h
+            RW: randread
+            VERIFY: md5
+      verify_fio:
+        ssd_md5:
+          template: basic_verify.fio
+          filesystem: true
+          skip_fs: true
+          args:
+            NAME: fio_filesystem_test
+            BLKSIZE: 128k
+            SIZE: 100g
+            DEPTH: 128
+            VERIFY: md5
+            RW: randread
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.drive_md5_verify.drive_md5_verify
+- name: DriveDataIntegrity10InbandWarmRebootCycleBootLocal
+  runner: autoval
+  args:
+    test_params:
+      critical_error_msgs_re_list:
+        - "[[lspci_vvv]] Verify System Config before / after test"
+      critical_error_types:
+        - POST_TEST_CONFIG_VALIDATION_ERR
+      cycle_count: 10
+      cycle_type: reboot
+      include_boot_drive: true
+      remote_fio: false
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
+- name: flash_fio_readiness
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      drive_type: ssd
+      run_definition:
+        randrw:
+          template: flash_fio_readiness.job
+          args:
+            RUNTIME: 30m
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: namespace_utilization_custom_blocksize
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      cycle: 3
+      expected_nuse_size: 2621440
+      nvme_format_block_size: 4096
+      run_definition:
+        write:
+          template: basic_write.fio
+          args:
+            BLKSIZE: 256k
+            SIZE: 10GB
+            DEPTH: 32
+            RUNTIME: "3600"
+            VERIFY: md5
+            DO_VERIFY: 0
+            RW: write
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.namespace_utilization_test.namespace_utilization_test
+- name: USSDT_Workload_loop_OCP2.6
+  runner: autoval
+  args:
+    test_params:
+      test_drive_filter: true
+      drive_type: ssd
+      workload:
+        "0": USSDT_Workload_loop_OCP2.6
+      fio_synth_params:
+        synth_verify: true
+        ignore_error: true
+        parallel: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 86400
+  cmd: autoval_ssd.tests.fio_synth_flash.fio_synth_flash
+- name: Flash_Data_DriveDataIntegrity_DC_Cycle_Notified_LocalFio_WithPeriodicDriveMonitorSideband_10Cycles_Remote
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: dc
+      drive_type: ssd
+      enable_periodic_drive_monitor: true
+      only_sideband_cmds: true
+      periodic_drive_monitor_interval: 1
+      remote_fio: false
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
+- name: NVME_Format_10_Cycles
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 1
+      drive_interface: nvme
+      drive_type: ssd
+      format_cycles: 10
+      fstype: ext4
+      ignore_smart: true
+      run_definition:
+        filesystem_io:
+          args:
+            BLKSIZE: 4K
+            BUFFER_PATTERN: "0xA5"
+            DEPTH: 128
+            DO_VERIFY: 1
+            NAME: fio_nvme
+            RUNTIME: 3m
+            RW: write
+          template: nvme_format_template.fio
+      secure_erase_option:
+        - 0
+        - 1
+        - 2
+      skip_iops_validation: true
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.nvme_format.nvme_format
+- name: sed_check
+  runner: autoval
+  args:
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 3600
+  cmd: autoval_ssd.tests.sed_check.sed_check
+- name: DriveDataIntegrity10AcCycleLocal
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: ac
+      drive_type: ssd
+      remote_fio: false
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
+- name: Flash_Data_DriveDataIntegrity_HwcColdReset_50_PercentDriveFill_10Cycles
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: dc
+      remote_fio: false
+      drive_type: ssd
+      precondition_drive_fill_percent: 50
+      hwc_reset: true
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 1800
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
+- name: driveDataIntegrity10DcCycleGracefulShutDownLocal
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: graceful_30s_cycle
+      include_boot_drive: true
+      remote_fio: false
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
