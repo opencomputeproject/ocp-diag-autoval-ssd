@@ -1,0 +1,17 @@
+{
+    "verify_io": true,
+		"only_boot_drive": true,
+    "run_definition": {
+      "random_read_write": {
+        "template": "range_verify.job",
+        "args": {
+            "RW": "randrw",
+            "BLKSIZERANGE": "4k-128k",
+            "SIZE": "100%",
+            "RUNTIME": "3m",
+            "DEPTH": 128,
+            "VERIFY": "crc32c"
+        }
+      }
+    }
+}

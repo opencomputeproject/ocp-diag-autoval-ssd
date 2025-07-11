@@ -267,7 +267,15 @@ class DriveFwUpdateUtil:
                 _msg,
                 error_type=ErrorType.INPUT_ERR,
             )
-        return os.path.join(root_path, vendor, model)
+        fw_path = os.path.join(root_path, vendor, model)
+        if not os.path.isdir(fw_path):
+            _msg = f"Firmware path {fw_path} does not exist. Please add your fw_version_map.json and fw bin files to {fw_path}"
+            raise TestError(
+                _msg,
+                component=COMPONENT.SYSTEM,
+                error_type=ErrorType.SYSTEM_ERR,
+            )
+        return fw_path
 
     def _get_firmware_map(self, drive: Drive) -> Dict[str, Any]:
         """

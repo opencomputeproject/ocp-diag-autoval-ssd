@@ -1,0 +1,23 @@
+{
+		"drive_type": "ssd",
+    "include_boot_drive": true,
+    "cycle": 25,
+    "versions": ["latest", "stable"],
+    "parallel_update": true,
+    "verify_io": true,
+    "skip_iops_validation": true,
+    "nvme_update_actions": [1, 2, 3],
+    "run_definition": {
+      "verify": {
+        "template": "range_verify.job",
+        "args": {
+            "RW": "randrw",
+            "BLKSIZERANGE": "4k-128k",
+            "SIZE": "100%",
+            "RUNTIME": "3m",
+            "DEPTH": 128,
+            "VERIFY": "crc32c"
+        }
+      }
+    }
+}

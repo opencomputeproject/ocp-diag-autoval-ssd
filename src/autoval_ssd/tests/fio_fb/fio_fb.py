@@ -9,19 +9,16 @@
 # pyre-unsafe
 from pprint import pformat
 from threading import Event
-from time import sleep
+from typing import Dict, Tuple
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.utils.autoval_errors import ErrorType
-from autoval.lib.utils.autoval_exceptions import CmdError
-from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
+from autoval_ssd.lib.utils.drive_monitor_utils import DriveMonitorUtils
 
 from autoval_ssd.lib.utils.filesystem_utils import FilesystemUtils
 from autoval_ssd.lib.utils.fio_runner import FioRunner
-from autoval_ssd.lib.utils.sed_util import SedUtils
-from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
 
 
@@ -32,16 +29,29 @@ class FioFb(StorageTestBase):
     and running the fio jobs.
     """
 
-    def setup(self, *args, **kwargs) -> None:
-        super().setup(*args, **kwargs)
+    def __init__(self, *args: Tuple[object, ...], **kwargs: Dict[str, object]) -> None:
+        super().__init__(*args, **kwargs)
+
         self.enable_periodic_drive_monitor = self.test_control.get(
             "enable_periodic_drive_monitor", False
         )
+        self.end_of_test = None
+
+    def setup(self, *args, **kwargs) -> None:
+        super().setup(*args, **kwargs)
         if self.enable_periodic_drive_monitor:
+            self.interval = self.test_control.get(
+                "periodic_drive_monitor_interval", None
+            )
+            only_sideband_cmds = self.test_control.get("only_sideband_cmds", False)
             self.end_of_test = Event()
             self.monitor_thread = AutovalThread.start_autoval_thread(
-                self.start_periodic_drive_monitor,
+                DriveMonitorUtils.start_periodic_drive_monitor,
+                host=self.host,
+                test_drives=self.test_drives,
                 end_of_test=self.end_of_test,
+                periodic_drive_monitor_interval=self.interval,
+                only_sideband_cmds=only_sideband_cmds,
             )
 
     def execute(self) -> None:
@@ -94,13 +104,11 @@ class FioFb(StorageTestBase):
             - When fails to collect the logs from DUT/OpenBMC.
 
         """
-        if self.enable_periodic_drive_monitor:
+        if self.enable_periodic_drive_monitor and self.end_of_test:
             self.end_of_test.set()
             AutovalThread.wait_for_autoval_thread([self.monitor_thread])
         # Cleanup all drives except boot drive
         drives = [d for d in self.test_drives if str(d) != str(self.boot_drive)]
-        # Exclude emmc as well
-        drives = [d for d in drives if str(d) != "mmcblk0"]
         for device in drives:
             mnt = "/mnt/fio_test_%s" % device.block_name
             AutovalUtils.validate_no_exception(
@@ -126,93 +134,3 @@ class FioFb(StorageTestBase):
                 f"Template arguments: {args}"
             )
         return params
-
-    def is_enclosure_util_supported(self) -> bool:
-        """
-        Checks if the enclosure utility is supported on the host.
-        Args:
-            None
-        Returns:
-            True if the enclosure utility is supported, False otherwise.
-        Raises:
-            CmdError: If there is an unexpected error running the command.
-        """
-        slot_info = self.host.oob.get_slot_info()
-        cmd = f"enclosure-util {slot_info} --drive-status all"
-        try:
-            self.host.oob.bmc_host.run(cmd)
-        except CmdError as e:
-            if "Please check the board config" in str(e) or "command not found" in str(
-                e
-            ):
-                return False
-            raise
-        return True
-
-    def start_periodic_drive_monitor(self, end_of_test: Event) -> None:
-        """
-        Start periodic drive monitoring
-        """
-        MAX_PERIODIC_DRIVE_MONITOR_DURATION = 10 * 3600
-        DEFAULT_INTERVAL_SECONDS = 15 * 60
-        remaining_duration = MAX_PERIODIC_DRIVE_MONITOR_DURATION
-        interval = self.test_control.get(
-            "periodic_drive_monitor_interval", DEFAULT_INTERVAL_SECONDS
-        )
-        AutovalLog.log_info(
-            f"Starting periodic drive monitoring with {interval}s interval"
-        )
-        opal2_0_drives, _ = SedUtils.opal_support_scan(self.host)
-        AutovalLog.log_info(f"Opal2 supported drives: {opal2_0_drives}")
-        is_enclosure_util_supported = self.is_enclosure_util_supported()
-        try:
-            self.host.oob.bmc_host.run("which enclosure-util")
-            is_enclosure_util_supported = True
-        except CmdError:
-            AutovalLog.log_info("enclosure-util not installed on BMC")
-
-        while remaining_duration > 0 and not end_of_test.is_set():
-            if is_enclosure_util_supported:
-                AutovalUtils.validate_no_exception(
-                    self.host.oob.bmc_host.run,
-                    [
-                        f"enclosure-util {self.host.oob.get_slot_info()} --drive-status all"
-                    ],
-                    f"[Periodic Drive Monitoring][{self.host.oob.get_slot_info()}] Assert no enclosure-util cmd exception",
-                    raise_on_fail=False,
-                    log_on_pass=False,
-                )
-            AutovalUtils.validate_no_exception(
-                self.host.oob.bmc_host.run,
-                [f"sensor-util {self.host.oob.get_slot_info()}"],
-                f"[Periodic Drive Monitoring][{self.host.oob.get_slot_info()}] Assert no sensor-util cmd exception",
-                raise_on_fail=False,
-                log_on_pass=False,
-            )
-            for drive in self.test_drives:
-                if isinstance(drive, NVMeDrive):
-                    AutovalUtils.validate_no_exception(
-                        drive.get_smart_log,
-                        [],
-                        f"[Periodic Drive Monitoring][{drive.block_name}] Assert no nvme smart-log cmd exception",
-                        raise_on_fail=False,
-                        log_on_pass=False,
-                    )
-
-                    if drive.block_name in opal2_0_drives:
-                        AutovalUtils.validate_no_exception(
-                            self.host.run,
-                            [
-                                f"nvme security-recv -p 0x1 -s 0x1 -t 256 -x 256 /dev/{drive.block_name}"
-                            ],
-                            f"[Periodic Drive Monitoring][{drive.block_name}] Assert no nvme security-recv cmd exception",
-                            raise_on_fail=False,
-                            log_on_pass=False,
-                        )
-
-            for _ in range(interval):
-                if end_of_test.is_set():
-                    break
-                sleep(1)
-                remaining_duration -= 1
-        AutovalLog.log_info("End of periodic drive monitoring")
