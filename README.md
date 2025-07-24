@@ -114,3 +114,21 @@ $ python -m autoval.autoval_test_runner \
     --suite ocp-diag-autoval-ssd/src/autoval_ssd/cfg/test_suites/sanity_ussdt_on_diffs.yaml \
     --config ./hosts.json
 ```
+
+#### Args
+You can use the --args flag to specify test control parameters directly in the command line. Parameters provided via --args will take precedence over those defined in the test control JSON file if the same parameter name is used. For example, to include the boot drive in your tests, use:
+```bash
+$ export SITE_SETTINGS="path/to/site_settings.json"
+$ python -m autoval.autoval_test_runner autoval_ssd.tests.nvme_cli.nvme_cli \
+    --args '{"include_boot_drive": true}' \
+    --config ./hosts.json \
+    --test_control ~/bin/ocp-diag-autoval-ssd/autoval_ssd/tests/nvme_cli/control.json
+```
+To run your test or test suite exclusively on the boot drive, use:
+```bash
+$ export SITE_SETTINGS="path/to/site_settings.json"
+$ python -m autoval.autoval_test_runner \
+    --args '{"only_boot_drive": true}' \
+    --suite ocp-diag-autoval-ssd/src/autoval_ssd/cfg/test_suites/sanity_ussdt_on_diffs.yaml \
+    --config ./hosts.json
+```
