@@ -1,0 +1,193 @@
+- name: NVME_NS_Resize_dix_tooling
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      sweep_param_key: overprovisioning
+      sweep_param_unit: percent
+      sweep_param_values:
+      - 75
+      cycle_count: 1
+      dix_ns_resize: true
+      validate_tooling: true
+      skip_iops_validation: true
+      run_definition:
+        filesystem_io:
+          template: filesystem_template.job
+          args:
+            NAME: fio_nvme
+            RW: write
+            SIZE: 10G
+            RUNTIME: 60
+            DEPTH: 128
+            MIXWRITE: 50
+            MIXREAD: 50
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.nvme_ns_resize.nvme_ns_resize
+- name: NVME_NS_Resize_dix_resize
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      sweep_param_key: overprovisioning
+      sweep_param_unit: percent
+      sweep_param_values:
+      - 75
+      cycle_count: 1
+      dix_ns_resize: true
+      validate_drive_fw_update: false
+      force_update: true
+      fw_slots:
+      - 1
+      nvme_update_actions:
+      - 1
+      power_trigger: true
+      skip_iops_validation: true
+      workloads:
+        write:
+          basic_write:
+            template: basic_write.fio
+            args:
+              SIZE: 100%
+              DEPTH: 128
+              RUNTIME: 5m
+              VERIFY: md5
+              RW: write
+        read:
+          basic_read:
+            template: basic_read.fio
+            args:
+              SIZE: 100%
+              DEPTH: 128
+              RUNTIME: 5m
+              VERIFY: md5
+              RW: read
+        verify:
+          basic_verify:
+            template: basic_verify.fio
+            args:
+              RW: read
+              VERIFY: md5
+              SIZE: 100%
+              DEPTH: 128
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.nvme_ns_resize.nvme_ns_resize
+- name: NVME_NS_Resize_fdp_resize
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      sweep_param_key: overprovisioning
+      sweep_param_unit: percent
+      sweep_param_values:
+      - 75
+      cycle_count: 1
+      fdp_setup: true
+      validate_drive_fw_update: false
+      force_update: true
+      fw_slots:
+      - 1
+      nvme_update_actions:
+      - 1
+      power_trigger: true
+      skip_iops_validation: true
+      workloads:
+        write:
+          basic_write:
+            template: basic_write.fio
+            args:
+              SIZE: 100%
+              DEPTH: 128
+              RUNTIME: 5m
+              VERIFY: md5
+              RW: write
+        read:
+          basic_read:
+            template: basic_read.fio
+            args:
+              SIZE: 100%
+              DEPTH: 128
+              RUNTIME: 5m
+              VERIFY: md5
+              RW: read
+        verify:
+          basic_verify:
+            template: basic_verify.fio
+            args:
+              RW: read
+              VERIFY: md5
+              SIZE: 100%
+              DEPTH: 128
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.nvme_ns_resize.nvme_ns_resize
+- name: NVME_NS_Resize_fdp_tooling
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      sweep_param_key: overprovisioning
+      sweep_param_unit: percent
+      sweep_param_values:
+      - 75
+      cycle_count: 1
+      fdp_setup: true
+      validate_tooling: true
+      skip_iops_validation: true
+      run_definition:
+        filesystem_io:
+          template: filesystem_template.job
+          args:
+            NAME: fio_nvme
+            RW: write
+            SIZE: 10G
+            RUNTIME: 60
+            DEPTH: 128
+            MIXWRITE: 50
+            MIXREAD: 50
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: true
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.nvme_ns_resize.nvme_ns_resize
+- name: NVMECLI_fdp
+  runner: autoval
+  args:
+    test_params:
+      drive_type: ssd
+      drive_interface: nvme
+      check_crypto_erase: false
+      include_boot_drive: false
+      fdp_setup: true
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: false
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 3600
+  cmd: autoval_ssd.tests.nvme_cli.nvme_cli

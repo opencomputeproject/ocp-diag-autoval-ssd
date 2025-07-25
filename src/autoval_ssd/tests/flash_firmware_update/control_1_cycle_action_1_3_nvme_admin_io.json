@@ -1,0 +1,9 @@
+{
+"drive_type": "ssd",
+"include_boot_drive": true,
+"cycle": 1,
+"versions": ["latest", "stable"],
+"nvme_admin_io": true,
+"skip_iops_validation": true,
+"nvme_update_actions": [1, 3]
+}
