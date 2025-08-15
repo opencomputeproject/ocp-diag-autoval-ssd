@@ -2,19 +2,20 @@
 
 # pyre-unsafe
 """utils for manage NMVE drive"""
+
 import json
 import re
 import time
 from enum import auto, Enum
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional, Union
+
+from autoval.lib.host.component.component import COMPONENT
+from autoval.lib.host.host import Host
+from autoval.lib.utils.autoval_errors import ErrorType
 
 from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_utils import AutovalUtils
-
-
-if TYPE_CHECKING:
-    from autoval.lib.host.host import Host
 
 
 class NVMeDeviceEnum(Enum):
@@ -24,6 +25,14 @@ class NVMeDeviceEnum(Enum):
     CHARACTER = auto()
     PARTITION = auto()
     INVALID = auto()
+
+
+class NVMeGetFeatureSelect(Enum):
+    """-s flag options for the nvme get-feature command"""
+
+    CURRENT = 0
+    DEFAULT = 1
+    SAVED = 2
 
 
 class NVMeUtils:
@@ -52,7 +61,7 @@ class NVMeUtils:
         return NVMeDeviceEnum.INVALID
 
     @staticmethod
-    def get_id_ctrl(host, device_name) -> Dict:
+    def get_id_ctrl(host, device_name) -> dict:
         """
         @param Host : host
         @param String block_name: e.g. nvme1n1 or char_name: eg nvme1
@@ -81,7 +90,7 @@ class NVMeUtils:
         return out
 
     @staticmethod
-    def get_id_ns(host, device_name: str, nsid: Optional[int] = None) -> Dict:
+    def get_id_ns(host, device_name: str, nsid: Optional[int] = None) -> dict:
         """
         Return identify namespace json output.
         @param Host : host
@@ -141,26 +150,41 @@ class NVMeUtils:
         ]
         """
         ret = host.run_get_result("nvme list -o json")
-        nvme_list = json.loads(ret.stdout)
-        return nvme_list["Devices"]
+        try:
+            output = json.loads(ret.stdout)
+        except json.JSONDecodeError:
+            output = NVMeUtils.parse_json_string(ret.stdout)
+        nvme_list = output["Devices"]
+        entry_list = []
+        for dr in nvme_list:
+            if "DevicePath" not in dr:
+                for output in dr.get("Subsystems", []):
+                    entry_list.extend(NVMeUtils.convert_nvme_output(output))
+
+        nvme_list = entry_list or nvme_list
+        return nvme_list
 
     @staticmethod
-    def get_from_nvme_list(host, block_name, field):
+    def get_from_nvme_list(host, block_name, field, nvme_list_info=None):
         """
         @param String block_name: e.g. nvme1n1
         @param String field: field to update
+        @param nvme_list_info: list of dictionaries containing information about nvme drives
         @return String: value of given field
         """
-        nvme_list = NVMeUtils.get_nvme_list(host)
+
+        if nvme_list_info is None:
+            nvme_list_info = NVMeUtils.get_nvme_list(host)
+
         path = "/dev/%s" % block_name
         try:
-            drive_data = [dr for dr in nvme_list if dr["DevicePath"] == path].pop()
+            drive_data = [dr for dr in nvme_list_info if dr["DevicePath"] == path].pop()
         except IndexError:
             raise TestError(
-                f"Unable to find DevicePath for {block_name} in {nvme_list}"
+                "Unable to find DevicePath for %s in %s" % (block_name, nvme_list_info)
             )
         if field not in drive_data:
-            raise TestError(f"Unable to find {field} in {drive_data}")
+            raise TestError("Unable to find %s in %s" % (field, drive_data))
         if isinstance(drive_data[field], str):
             return drive_data[field].strip()
         return drive_data[field]
@@ -411,6 +435,8 @@ class NVMeUtils:
         ret = host.run_get_result(cmd)
         out_json = AutovalUtils.loads_json(ret.stdout)
         if "critical_warning" in out_json:
+            if isinstance(out_json["critical_warning"], dict):
+                out_json["critical_warning"] = out_json["critical_warning"]["value"]
             if (out_json["critical_warning"]) & (1 << 3):
                 return True
         return False
@@ -592,6 +618,95 @@ class NVMeUtils:
             A boolean indicating whether the current version is greater than or equal to the expected version.
         """
 
-        parts1 = [int(part) for part in expected_version.split(".")[:2]]
-        parts2 = [int(part) for part in current_version.split(".")[:2]]
+        def extract_version_parts(version_str):
+            # Extract the first version-like pattern (e.g., 2.8, 2.10.0)
+            match = re.search(r"\d+(\.\d+)+", version_str)
+            if match:
+                return tuple(int(x) for x in match.group().split("."))
+            return ()
+
+        parts1 = extract_version_parts(expected_version)
+        parts2 = extract_version_parts(current_version)
+        # Pad shorter version with zeros for fair comparison
+        maxlen = max(len(parts1), len(parts2))
+        parts1 += (0,) * (maxlen - len(parts1))
+        parts2 += (0,) * (maxlen - len(parts2))
         return parts2 >= parts1
+
+    @staticmethod
+    def convert_nvme_output(
+        new_output: Dict[str, Any],
+    ) -> list[Optional[Dict[str, Union[str, int]]]]:
+        """
+        Convert the new nvme list -o json output to old format
+
+        Args:
+            new_output: nvme list -o json output in new format
+
+        Return:
+            old_format_list: old format
+        """
+        controllers = new_output.get("Controllers", [])
+        old_format_list = []
+
+        for controller in controllers:
+            if "Namespaces" in controller and controller["Namespaces"]:
+                for namespace_info in controller["Namespaces"]:
+                    # Create the old output format
+                    old_format = {
+                        "NameSpace": namespace_info.get("NSID"),
+                        "DevicePath": f"/dev/{namespace_info.get('NameSpace')}",
+                        "Firmware": controller.get("Firmware"),
+                        "Index": int(controller.get("Controller").replace("nvme", "")),
+                        "ModelNumber": controller.get("ModelNumber"),
+                        "SerialNumber": controller.get("SerialNumber"),
+                        "UsedBytes": namespace_info.get("UsedBytes"),
+                        "MaximumLBA": namespace_info.get("MaximumLBA"),
+                        "PhysicalSize": namespace_info.get("PhysicalSize"),
+                        "SectorSize": namespace_info.get("SectorSize"),
+                    }
+                    old_format_list.append(old_format)
+
+        return old_format_list
+
+    @staticmethod
+    def get_nvme_list_subsys(host: Host) -> Dict[str, str]:
+        """
+        This method returns the nvme drive name to its pci address
+        Args:
+            host: Host object
+
+        Returns:
+            nvme_pcie_link: Dictionary of nvme device and its corresponding pcie link
+        """
+        nvme_pcie_link = {}
+        out = host.run("nvme list-subsys")
+        for line in out.split("\n"):
+            if "live" in line:
+                match = re.search(r"nvme(\d+)\s+pcie\s+(\d+:\d+:\d+.\d+)", line)
+                if match:
+                    nvme_pcie_link[match.group(1)] = match.group(2)
+        return nvme_pcie_link
+
+    @staticmethod
+    def parse_json_string(out: str) -> dict:
+        """
+        Parse the json string and return the json value.
+        Args:
+            out (str): The json string to be parsed.
+        Returns:
+            dict: The parsed json value.
+        """
+        json_match = re.search(r"\{.*\}", out, re.DOTALL)
+        out_json = {}
+        if json_match:
+            try:
+                json_str = json_match.group(0)
+                out_json = json.loads(json_str)
+            except json.decoder.JSONDecodeError as e:
+                raise TestError(
+                    f"Failed to convert to JSON: {out}\nError:{e}",
+                    component=COMPONENT.STORAGE_DRIVE,
+                    error_type=ErrorType.TOOL_ERR,
+                )
+        return out_json
