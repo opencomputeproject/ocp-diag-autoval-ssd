@@ -211,8 +211,9 @@ class NVMeDrive(Drive):
         """
         Method to get the controller properties
         """
-        nvme_drive = "/dev/%s" % self.block_name
-        cmd = "nvme show-regs %s -H" % nvme_drive
+        pattern = re.compile(r'^(nvme\d+)(?=n)')
+        char_name = pattern.match(self.block_name).group(1)
+        cmd = "nvme show-regs /dev/%s -H" % char_name
         out = AutovalUtils.validate_no_exception(
             self.host.run,
             [cmd],
@@ -560,7 +561,9 @@ class NVMeDrive(Drive):
         TestStepError
             When fails to retrieve the command effects log.
         """
-        cmd = "nvme effects-log /dev/%s -o json" % self.block_name
+        pattern = re.compile(r'^(nvme\d+)(?=n)')
+        char_name = pattern.match(self.block_name).group(1)
+        cmd = "nvme effects-log /dev/%s -o json" % char_name
         out = self.host.run(cmd=cmd)
         return json.loads(out)
 
