@@ -1,0 +1,21 @@
+{
+		"drive_type": "ssd",
+    "include_boot_drive": true,
+    "cycle": 50,
+    "versions": ["latest", "stable"],
+    "verify_io": true,
+    "skip_iops_validation": true,
+    "run_definition": {
+      "random_read_write": {
+        "template": "range_verify.job",
+        "args": {
+            "RW": "randrw",
+            "BLKSIZERANGE": "4k-128k",
+            "SIZE": "100%",
+            "RUNTIME": "3m",
+            "DEPTH": 128,
+            "VERIFY": "crc32c"
+        }
+      }
+    }
+}

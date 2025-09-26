@@ -1,0 +1,68 @@
+- name: Flash_data_integrity_10_local_warm
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: warm
+      drive_type: ssd
+      remote_fio: false
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
+- name: Flash_data_integrity_10_local_dc
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: dc
+      drive_type: ssd
+      remote_fio: false
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
+- name: Flash_data_integrity_10_local_ac
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: ac
+      drive_type: ssd
+      remote_fio: false
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 21600
+  cmd: autoval_ssd.tests.drive_data_integrity.drive_data_integrity
+- name: USSDT_Workload_loop
+  runner: autoval
+  args:
+    test_params:
+      test_drive_filter: true
+      drive_type: ssd
+      workload:
+        - USSDT_Workload_loop
+      fio_synth_params:
+        synth_verify: true
+        ignore_error: true
+        parallel: true
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 86400
+  cmd: autoval_ssd.tests.fio_synth_flash.fio_synth_flash

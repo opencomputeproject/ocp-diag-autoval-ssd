@@ -1,0 +1,14 @@
+[global]
+rw=RW
+direct=1
+ioengine=io_uring
+verify=VERIFY
+do_verify=1
+size=SIZE
+bsrange=BLKSIZERANGE
+iodepth=DEPTH
+runtime=RUNTIME
+time_based
+verify_backlog=10000000
+verify_async=4
+group_reporting=1

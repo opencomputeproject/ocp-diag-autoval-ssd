@@ -70,7 +70,7 @@ class SedCheck(StorageTestBase):
                         str(drive.get_tcg_ownership_status()),
                         [
                             str(OwnershipStatus.SET),
-                            str(OwnershipStatus.BLOCKED_AND_SET),
+                            str(OwnershipStatus.BLOCKED_AND_NOT_SET),
                         ],
                         "validating the drive ownership status"
                         f" {drive.block_name} {drive.serial_number}",
