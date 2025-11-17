@@ -1,0 +1,21 @@
+{
+    "skip_iops_validation": true,
+    "skip_clean_filesystem": true,
+    "remove_partition": false,
+    "test_generic_drives": true,
+    "t10_dix_format": true,
+    "qlc_perf_test": true,
+    "run_definition": {
+        "randrw": {
+            "template": "qlc_performance.fio",
+            "args": {
+                "BLOCKSIZE": ["32K,256k","128K,256k","32K,128k","128K,128k"],
+                "IODEPTH":128,
+                "SIZE": "100%",
+                "NUMJOBS": "1",
+                "OFFSET": "0",
+                "RUNTIME": "20m"
+            }
+        }
+    }
+}
