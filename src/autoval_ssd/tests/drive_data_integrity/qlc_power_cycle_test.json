@@ -1,0 +1,11 @@
+{
+    "cycle_count": 1,
+    "cycle_type": "dc",
+    "remote_fio": false,
+    "drive_type": "ssd",
+    "test_generic_drives": true,
+    "t10_dix_format": true,
+    "qlc_power_cycle_test": true,
+    "qlc_fio_runtime": 120,
+    "num_power_cycles": 10
+}
