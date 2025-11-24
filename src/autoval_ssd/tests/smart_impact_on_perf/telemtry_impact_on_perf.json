@@ -1,0 +1,18 @@
+{
+    "include_boot_drive": true,
+    "collect_telemetry_log": true,
+    "time_interval" : [1, 5, 15, 60, 900, 3600],
+    "performance_check": {"name": "nvme_command", "args": {"commands": "nvme_commands"}, "interval":1},
+    "run_definition": {
+        "randrw": {
+            "template": "gen_randrw_70_30.fio",
+            "args": {
+                "BLKSIZE": "4K",
+                "SIZE": "100%",
+                "DEPTH": 64,
+                "RAMPTIME": "600",
+                "TIME": "1200"
+            }
+        }
+    }
+}

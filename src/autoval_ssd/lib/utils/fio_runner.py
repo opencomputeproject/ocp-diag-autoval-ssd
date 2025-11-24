@@ -2,6 +2,7 @@
 
 # pyre-unsafe
 """library to manage fio tool"""
+
 import datetime
 import itertools
 import json
@@ -14,7 +15,6 @@ from typing import Any, Dict, Optional, Tuple, Union
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.host.host import Host
 from autoval.lib.test_utils.test_utils_base import TestUtilsBase
-
 from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_exceptions import TestError, ToolError
 from autoval.lib.utils.autoval_log import AutovalLog
@@ -302,9 +302,7 @@ class FioRunner(TestUtilsBase):
         )
         all_drives = list(test_drives.values())
         _len = len(all_drives)
-        AutovalLog.log_info(
-            "Available %s %s drives: %s" % (_len, drive_type, all_drives)
-        )
+        AutovalLog.log_info(f"Available {_len} {drive_type} drives: {all_drives}")
         return all_drives
 
     def create_filesystem_mount(
@@ -368,7 +366,7 @@ class FioRunner(TestUtilsBase):
                 df_info["type"],
                 filesystem_type,
                 # pyre-fixme[61]: `mnt` is undefined, or not always defined.
-                "Mounted %s at %s" % (device, mnt),
+                f"Mounted {device} at {mnt}",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.SYSTEM_ERR,
             )
@@ -462,6 +460,10 @@ class FioRunner(TestUtilsBase):
             # when allow_mounted_write value is passed as a argument value
             if key == "ALLOW_MOUNTED_WRITE":
                 content = content + key.lower() + "=" + str(value)
+
+        if not _size:
+            _size = "100%"
+
         idx = 0
         dev_str = content + "\n"
         dev_str, global_blocksize_removed = self._remove_gloabal_blocksize(dev_str)
@@ -588,7 +590,7 @@ class FioRunner(TestUtilsBase):
             file is not located in a path with a lib/ subdirectory.
         """
         current_file_path = os.path.abspath(__file__)
-        pattern = r"^(/.*?)/autoval_ssd/"
+        pattern = r"^(/.*?/lib)"
         match = re.search(pattern, current_file_path)
         if not match:
             raise TestError(
@@ -596,8 +598,8 @@ class FioRunner(TestUtilsBase):
                 f"Directory 'lib/' missing from path '{current_file_path}' of current file '{__file__}'.\n"
                 "This is likely caused by an AutoVal build or packaging issue."
             )
-        lib_path = match.group(0)[:-1]
-        return os.path.join(lib_path, "lib/utils/jobfile_templates")
+        lib_path = match.group(1)
+        return os.path.join(lib_path, "utils/jobfile_templates")
 
     def _create_file(self, device: str, _file: str, _size: str):
         """
@@ -682,7 +684,7 @@ class FioRunner(TestUtilsBase):
             FioRunner.prefix_command_name
         ).replace("WORKING_DIR", self.resultsdir)
         cmd = f"{FioRunner.prefix_cmd} fio {job} --output-format=json --output={output_file}"
-        AutovalLog.log_info("Running %s FIO command: %s" % (self.job_name, cmd))
+        AutovalLog.log_info(f"Running {self.job_name} FIO command: {cmd}")
         if opts:
             cmd += str(opts)
         out = self.run_fio(
@@ -713,7 +715,7 @@ class FioRunner(TestUtilsBase):
 
     def run_interupted_fio(
         self, job: str, power_cycle: str, remote: bool = False
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """Runs FIO with a dirty power off during the process.
         This function runs FIO with a dirty power off during the process and forms
         the power command with a random time value for trigger.
@@ -742,10 +744,10 @@ class FioRunner(TestUtilsBase):
         output_file = os.path.join(
             self.resultsdir, f"fio_{self.host.hostname}_{_time}.json"
         )
-        cmd = "fio %s --output-format=json --output=%s" % (job, output_file)
+        cmd = f"fio {job} --output-format=json --output={output_file}"
         cmd += power_cmd
         AutovalLog.log_info(
-            "Running %s FIO command with power trigger: %s" % (self.job_name, cmd)
+            f"Running {self.job_name} FIO command with power trigger: {cmd}"
         )
         current_reboot = self.host.get_last_reboot()
         ret = True
@@ -763,7 +765,7 @@ class FioRunner(TestUtilsBase):
                 if i in str(exc) and not check_parse_fio_error:
                     AutovalLog.log_as_cmd(cmd)
                     AutovalLog.log_info(str(exc))
-                    _msg = "[HAVOC]: fio interrupted due to power trigger"
+                    _msg = "[autoval]: fio interrupted due to power trigger"
                     check_parse_fio_error = True
             if not check_parse_fio_error:
                 raise TestError(
@@ -1113,10 +1115,10 @@ class FioRunner(TestUtilsBase):
                 perf = {}
                 for field in ["bw", "bw_agg", "bw_max", "bw_min", "bw_mean"]:
                     perf["%s (Kb/s)" % field] = job[r_w][field]
-                    _job_data["%s_%s" % (r_w, field)] = job[r_w][field]
+                    _job_data[f"{r_w}_{field}"] = job[r_w][field]
                 for field in ["iops", "total_ios"]:
                     perf["%s" % field] = int(job[r_w][field])
-                    _job_data["%s_%s" % (r_w, field)] = int(job[r_w][field])
+                    _job_data[f"{r_w}_{field}"] = int(job[r_w][field])
                 for lat in ["mean", "min", "max"]:
                     if "lat_ns" in job[r_w]:
                         _job_data[f"{r_w}_{lat}_lat"] = job[r_w]["lat_ns"][lat]
@@ -1131,11 +1133,9 @@ class FioRunner(TestUtilsBase):
                                 perf[f"{clat_perc}%"] = job[r_w]["clat_ns"][
                                     "percentile"
                                 ][clat_perc]
-                AutovalLog.log_debug("\n%s -- %s" % (jobname, r_w))
+                AutovalLog.log_debug(f"\n{jobname} -- {r_w}")
                 AutovalLog.log_debug(
-                    ", ".join(
-                        "{}: {}".format(key, value) for key, value in perf.items()
-                    )
+                    ", ".join(f"{key}: {value}" for key, value in perf.items())
                 )
             # Adding latency_ms to fio_results
             if job["latency_ms"]:
@@ -1144,7 +1144,7 @@ class FioRunner(TestUtilsBase):
             fio["result"].append(_job_data)
         return fio
 
-    def trim(self, drives, opts=None, mnt: str = "/mnt/havoc") -> None:
+    def trim(self, drives, opts=None, mnt: str = "/mnt/autoval") -> None:
         """Performs Random Trim Fio Jobs.
 
         This methods performs random trim fio jobs on DUT by the following
@@ -1175,14 +1175,14 @@ class FioRunner(TestUtilsBase):
         mnt_options = "noatime,nodiratime,discard,nobarrier"
         fstype = "ext4"
         for dev in drives:
-            if mnt == "/mnt/havoc":
+            if mnt == "/mnt/autoval":
                 mnt = f"{mnt}_{dev}"
             host = self.host
             FilesystemUtils.mount(host, dev, mnt, mnt_options, fstype)
             df_info = FilesystemUtils.get_df_info(host, dev)
             AutovalUtils.validate_condition(
                 df_info["type"] == fstype,
-                "Mounted %s at %s" % (dev, mnt),
+                f"Mounted {dev} at {mnt}",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.SYSTEM_ERR,
             )
@@ -1240,7 +1240,8 @@ class FioRunner(TestUtilsBase):
         precondition_template,
         remote,
         fio_opts=None,
-        mnt: str = "/mnt/havoc",
+        mnt: str = "/mnt/autoval",
+        precondition_params: Optional[Dict[str, str]] = None,
     ) -> None:
         """Performs Precondition Fio Jobs.
 
@@ -1259,6 +1260,8 @@ class FioRunner(TestUtilsBase):
             Set the flag to run fio jobs in remote location.
         fio_opts: String
             fio command line options
+        precondition_params : Dict
+            Can be modified with string replace methods.
 
         Raises
         ------
@@ -1271,7 +1274,7 @@ class FioRunner(TestUtilsBase):
         # unmount the drives if already mounted before running preconditioning on them
         AutovalLog.log_info("Unmount drives for precondition")
         for dev in drives:
-            if mnt == "/mnt/havoc":
+            if mnt == "/mnt/autoval":
                 mnt = f"{mnt}_{dev}"
             if FilesystemUtils.is_mounted(self.host, mnt):
                 FilesystemUtils.unmount(self.host, mnt)
@@ -1284,7 +1287,7 @@ class FioRunner(TestUtilsBase):
         for _cycle in range(1, precondition_loops + 1):
             job = self.create_fio_job(
                 drives=drives,
-                replace={},
+                replace=precondition_params or {},
                 templ_filename=precondition_template,
             )
             AutovalLog.log_info("Starting preconditioning cycle %s on DUT" % _cycle)
@@ -1437,7 +1440,7 @@ class FioRunner(TestUtilsBase):
         return additional_args
 
     @staticmethod
-    def check_run_definition_format(run_definitions: Dict) -> None:
+    def check_run_definition_format(run_definitions: dict) -> None:
         """Check dictionary run_definition for errors"""
         if not run_definitions:
             raise TestError(
@@ -1457,7 +1460,7 @@ class FioRunner(TestUtilsBase):
 
     def check_iops(
         self,
-        iops: Dict[str, Any],
+        iops: dict[str, Any],
         _type: Any,
         _by_model_or_cycle: str,
         _read_or_write: str,
@@ -1527,9 +1530,9 @@ class FioRunner(TestUtilsBase):
                         f"WARNING: {key} has {_read_or_write} iops: {value}"
                     )
             else:
-                AutovalLog.log_info("%s: %s is not a list" % (key, value))
+                AutovalLog.log_info(f"{key}: {value} is not a list")
 
-    def check_latency_ms(self, latency_ms: Dict, _type, _by_model_or_cycle) -> None:
+    def check_latency_ms(self, latency_ms: dict, _type, _by_model_or_cycle) -> None:
         """
         Check latency_ms
 
@@ -1568,8 +1571,8 @@ class FioRunner(TestUtilsBase):
                 )
 
     def filter_results_by_param(
-        self, results: Dict, _filter: str, filter_results: Dict, by_model: Dict
-    ) -> Tuple[Dict, Dict]:
+        self, results: dict, _filter: str, filter_results: dict, by_model: dict
+    ) -> tuple[dict, dict]:
         """
         Filter results by params.
 
@@ -1625,8 +1628,8 @@ class FioRunner(TestUtilsBase):
         self,
         host: Host,
         fio_command: str,
-        working_dir: Optional[str] = None,
-        timeout: Optional[int] = None,
+        working_dir: str | None = None,
+        timeout: int | None = None,
     ) -> CmdResult:
         kwargs = {
             "cmd": fio_command,
@@ -1652,7 +1655,7 @@ class FioRunner(TestUtilsBase):
         return cmd_result
 
     def validate_performance_metrics(
-        self, results: Dict, _type: str, by_model: Dict
+        self, results: dict, _type: str, by_model: dict
     ) -> None:
         """
         Get the threshold values from fio_runner.cconf and validate metrics in METRICS_TO_VALIDATE
@@ -1687,7 +1690,7 @@ class FioRunner(TestUtilsBase):
                 )
 
     def _validate_metric(
-        self, metric: str, metric_results: Dict, _type: str, _by_model_or_cycle: str
+        self, metric: str, metric_results: dict, _type: str, _by_model_or_cycle: str
     ) -> None:
         """
         Validates the fio results for metrics for given metric with the threshold values mentioned in fio_runner.cconf
@@ -1738,7 +1741,7 @@ class FioRunner(TestUtilsBase):
                     error_type=ErrorType.DRIVE_ERR,
                 )
 
-    def _convert_ns_to_s(self, value_ns: Union[int, float]) -> float:
+    def _convert_ns_to_s(self, value_ns: int | float) -> float:
         """
         Converts given value in nanoseconds to seconds.
 

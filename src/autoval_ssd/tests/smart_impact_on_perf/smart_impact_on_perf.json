@@ -1,0 +1,17 @@
+{
+    "include_boot_drive": true,
+    "time_interval" : [1, 5, 15, 60, 900, 3600],
+    "performance_check": {"name": "nvme_command", "args": {"commands": "all_commands"}, "interval":1},
+    "run_definition": {
+        "randrw": {
+            "template": "basic_write_no_verify.fio",
+            "args": {
+                "BLKSIZE": "4k",
+                "SIZE": "100%",
+                "DEPTH": 128,
+                "RUNTIME": 3600,
+                "RW": "rw"
+            }
+        }
+    }
+}
