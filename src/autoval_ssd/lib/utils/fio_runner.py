@@ -924,7 +924,7 @@ class FioRunner(TestUtilsBase):
 
     def run_interupted_fio(
         self, job: str, power_cycle: str, remote: bool = False
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """Runs FIO with a dirty power off during the process.
         This function runs FIO with a dirty power off during the process and forms
         the power command with a random time value for trigger.
