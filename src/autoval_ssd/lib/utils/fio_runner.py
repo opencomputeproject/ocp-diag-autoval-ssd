@@ -10,7 +10,7 @@ import os
 import random
 import re
 import time
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional, Tuple
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.host.host import Host
@@ -29,10 +29,13 @@ from autoval_ssd.lib.utils.disk_utils import DiskUtils
 from autoval_ssd.lib.utils.filesystem_utils import FilesystemUtils
 from autoval_ssd.lib.utils.storage.drive import Drive
 from autoval_ssd.lib.utils.storage.nvme.nvme_resize_utils import NvmeResizeUtil
+from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
 from autoval_ssd.lib.utils.storage.storage_utils import StorageUtils
 from autoval_ssd.lib.utils.system_utils import SystemUtils
 
 LIB_PATH = "lib/utils/jobfile_templates"
+JOBFILE_PATH = "/usr/local/FioSynth/jobfiles"
+FILE = []
 RUNTIME = 300
 COMPARISON_MAP = {
     "<": AutovalUtils.validate_less,
@@ -107,6 +110,7 @@ class FioRunner(TestUtilsBase):
                run_definition = Dictionary {String,String}.
         """
         logdirs = SiteUtils().get_log_dirs()
+        self.precondition_params = {}
         self.tmp_logdir = logdirs["control_server_logdir"]
         if host.hostname == "localhost":
             self.resultsdir = list(logdirs["dut_logdir"].values())[0]
@@ -130,7 +134,9 @@ class FioRunner(TestUtilsBase):
         self.trim_arg = args.get("trim_arg", {})
         self.run_definition = args.get("run_definition", {})
         self.power_trigger = args.get("power_trigger", False)
+        self.power_trigger_prefix = args.get("power_trigger_prefix", "")
         self.status_interval = args.get("status_interval", 1)
+        self.skip_direct: bool = args.get("skip_direct", False)
         self.rescan_data_drives = args.get("rescan_data_drives", False)
         self.enable_performance_metrics_validation = args.get(
             "enable_performance_metrics_validation", False
@@ -159,6 +165,18 @@ class FioRunner(TestUtilsBase):
                 ],
             }
         }
+        self.boot_drive_partitioned: bool = False
+        self.create_boot_drive_partition: bool = args.get(
+            "create_boot_drive_partition", False
+        )
+        self.boot_drive_precondition = args.get(
+            "boot_drive_precondition", self.test_boot_drive
+        )
+        self._current_test_params: dict[str, Any] = {}
+        self.test_generic_drives = args.get("test_generic_drives", False)
+        self.t10_dix_format = args.get("t10_dix_format", False)
+        self.qlc_perf_test = args.get("qlc_perf_test", False)
+        self.slc_stress_test = args.get("slc_stress_test", False)
 
     def test_setup(self) -> None:
         SystemUtils.install_rpms(
@@ -179,6 +197,18 @@ class FioRunner(TestUtilsBase):
         user_criteria = {
             "project_name": self.host.product_name,
         }
+
+        if self.create_boot_drive_partition:
+            if self.drives and self.boot_drive in self.drives:
+                self.boot_drive_fio_setup()
+            else:
+                AutovalLog.log_info(
+                    "Boot drive is not in the list of test drives, skipping boot drive partition creation"
+                )
+
+        if self.t10_dix_format:
+            self.format_t10_dix_drives()
+
         try:
             FioRunner.threshold_obj_dict = ThresholdConfig().get_threshold(
                 filepath=FioRunner.fio_runner_threshold_config,
@@ -294,11 +324,16 @@ class FioRunner(TestUtilsBase):
         all_drives     : :obj: 'List' of 'String'
             List of drives present on the host.
         """
+        drive_name_list = []
+        if drives:
+            for drive in drives:
+                drive_name_list.append(drive.block_name)
+
         test_drives = StorageUtils().get_test_drives(
             self.host,
             drive_type=drive_type,
             drive_interface=drive_interface,
-            drives=drives,
+            drives=drive_name_list,
         )
         all_drives = list(test_drives.values())
         _len = len(all_drives)
@@ -309,8 +344,8 @@ class FioRunner(TestUtilsBase):
         self,
         host,
         drives,
-        filesystem_type: str = "xfs",
-        filesystem_options: str = " -K -i size=2048",
+        filesystem_type: Optional[str] = "xfs",
+        filesystem_options: Optional[str] = " -K -i size=2048",
         parallel: bool = True,
     ) -> None:
         """Creates and mounts filesystem.
@@ -367,106 +402,78 @@ class FioRunner(TestUtilsBase):
                 filesystem_type,
                 # pyre-fixme[61]: `mnt` is undefined, or not always defined.
                 f"Mounted {device} at {mnt}",
+                log_on_pass=False,
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.SYSTEM_ERR,
             )
 
     def create_fio_job(
         self,
-        files=None,
-        drive_type=None,
-        drive_interface=None,
-        drives=None,
-        replace=None,
-        templ_filename=None,
-        job_name=None,
-        filesystem=None,
-        filesystem_type=None,
-        filesystem_options=None,
+        files: Optional[dict[str, str]] = None,
+        drive_type: Optional[str] = None,
+        drive_interface: Optional[str] = None,
+        drives: Optional[list[str | Drive]] = None,
+        replace: Optional[dict[str, str]] = None,
+        templ_filename: str = "",
+        job_name: Optional[str] = None,
+        filesystem: Optional[bool] = None,
+        filesystem_type: Optional[str] = None,
+        filesystem_options: Optional[str] = None,
         skip_fs: bool = False,
-        directory=None,
-        dest_job_file=None,
+        directory: Optional[bool] = None,
+        dest_job_file: Optional[str] = None,
+        precondition: bool = False,
+        cpu_drive_mapping: Optional[dict[str, list[str]]] = None,
     ) -> str:
-        """Creates FIO job.
+        """
+        Creates an FIO job file based on a template and the specified drives.
 
-        This method gets the list of test_drives on the DUT based on the
-        options passed i.e, drive_type, drive_interface,
-        all_block devices = True or False and any special drives passed
-        and Creates a new job file based on the 'template' file and the test_
-        drives list.
+        This method determines which drives to test, processes the template,
+        optionally creates or mounts filesystems, adds device-specific or
+        trim-based sections, writes out the job file, and copies it
+        into the results directory.
 
-        Parameters
-        ----------
-        files : String
-            FIO job files. Here default value is None.
-        drive_type      : String
-           Type of drive (HDD/SSD/MD) present on the host. Here default value
-            is None.
-        drive_interface : String
-           Type of drive interface (NVME/SAS/SATA) present on the host. Here
-           default value is None.
-        drives : :obj: 'List' of 'String'
-           List of drives present on the host. Here default value is None.
-        job_name = Dictionary {String,String}
-            Name of the FIO job. Here default value is None.
-        filesystem : String
-            Filesystem type. Here default value is None.
-        remote : Boolean
-            Set the flag to run fio jobs in remote location. Here default
-            value is False.
-        templ_filename  : String
-            Path to file containing job definition, takes default if nothing
-            is passed. Here default value is None.
-        replace         : :obj: 'List' of 'String'
-            List of key / value pairs to replace in template file
-            additional imputs for fio can be given as key value pair
-            in the name 'additional_fio_options'. Here default value is None.
-        filesystem_type : String
-            Contains the type of the filesystem to be created.
-        filesystem_options : String
-            Contains additional options while creating filesystem
-        skip_fs = Dictionary {String,String}.Here default value is False.
-            The skip_fs flag is being used to skip filesystem creation if already
-            present.
-            fio_timeout = Integer
-            Maximum time allowed for the fio cmd to run before timeout.
-            fio
-            Use case for skip_fs flag:
-                After FIO write and power cycle,if want to just mount the drives
-                and not create the filesystem again for FIO read operation
-                for md5 verification,this will be helpful.
-                In Normal case this will not prevent creating the filesystem as the
-                default value is set to False.
-        Returns
-        -------
-        dest_job_file   : String
-            Job file contains DUT log directory and templ_filename.
+        Args:
+            files: FIO job files to use. Defaults to None.
+            drive_type: Drive type filter (e.g. HDD, SSD). Defaults to None.
+            drive_interface: Drive interface filter (e.g. NVME, SAS, SATA). Defaults to None.
+            drives: Explicit list of drives to include. Defaults to None.
+            replace: Placeholder replacements for the template. Defaults to {}.
+            templ_filename: Template file name to base the job on. Defaults to empty string.
+            job_name: Name for the generated job file. Defaults to the template name.
+            filesystem: Whether to create a filesystem before running jobs.
+            filesystem_type: Type of filesystem to create.
+            filesystem_options: Options for filesystem creation.
+            skip_fs: If true, skips filesystem creation and just mounts existing ones.
+            directory: If true, uses directory mode instead of raw-device mode.
+            dest_job_file: Directory where the final job file will be placed.
+            precondition: Whether to include a precondition step in the job file.
+            ublkb_trim: Whether to add trim sections for ublkb devices.
+            trim_percent: Percentage of each drive to trim when trim is enabled.
+
+        Returns:
+            Path to the job file copied into the results directory.
 
         """
-        if replace is None:
-            replace = {}
+        file_path = False
+        replace = replace or {}
+
+        if self.qlc_perf_test:
+            replace["MDSIZE"] = self.get_qlc_md_size(replace)
+
         if not files and not drives:
             drives = self.get_drives(drive_type, drive_interface, drives)
-        templ_file = os.path.join(self.get_jobfile_templates_path(), templ_filename)
-        content = FileActions.read_data(templ_file)
-        _size = ""
-        for key, value in replace.items():
-            regex = re.compile(f"={key}", re.MULTILINE)
-            content = re.sub(regex, f"={value}", content)
-            if key == "SIZE":
-                _size = value
-            if key == "RUNTIME":
-                self.fio_timeout = DiskUtils.get_seconds(value) + 600
-            # when allow_mounted_write value is passed as a argument value
-            if key == "ALLOW_MOUNTED_WRITE":
-                content = content + key.lower() + "=" + str(value)
-
-        if not _size:
-            _size = "100%"
-
+        if templ_filename in FILE:
+            templ_path = os.path.join(JOBFILE_PATH, templ_filename)
+            file_path = True
+        else:
+            templ_path = FileActions.get_resource_file_path(
+                os.path.join(LIB_PATH, templ_filename), module="autoval_ssd"
+            )
         idx = 0
-        dev_str = content + "\n"
+        dev_str, _size = self._process_template(templ_path, replace, file_path)
         dev_str, global_blocksize_removed = self._remove_gloabal_blocksize(dev_str)
+
         if filesystem and not skip_fs:
             self.create_filesystem_mount(
                 self.host, drives, filesystem_type, filesystem_options
@@ -474,54 +481,40 @@ class FioRunner(TestUtilsBase):
         elif skip_fs:
             mnt = "/mnt/fio_test_%s/"
             FilesystemUtils.mount_all(self.host, drives, mnt, force_mount=False)
-        for device in drives:
-            if filesystem:
-                dev_str += "[job%d]\n" % idx
-                _file = "/mnt/fio_test_%s/file1" % device
-                dev_str += "filename=%s\n" % _file
-                dev_str += "fdatasync=1\n"
-                # if size specified as %, create file,
-                # otherwise fio will not be able to create file and it will fail
-                file_size = self._create_file(device, _file, _size)
-            elif directory:
-                dev_str += "[d%d]\n" % idx
-                dev_str += "directory=%s\n" % device
-                dev_str += "fdatasync=1\n"
-            else:
-                dev_str += "[job%d]\n" % idx
-                if str(device) == str(self.boot_drive) and DiskUtils.is_drive_mounted(
-                    self.host, str(self.boot_drive)
-                ):
-                    # Safety write to boot drive
-                    if files:
-                        _file = files["file"]
-                    else:
-                        _file = FioRunner.MOUNTED_DRIVE_FIO_PATH
-                    dev_str += "filename=%s\n" % _file
-                    file_size = self._create_file(device, _file, _size)
-                    dev_str += "size=%s\n" % file_size
-                    dev_str += "fdatasync=1\n"
-                else:
-                    # use raw device
-                    dev_str += "filename=/dev/%s\n" % str(device)
-            dev_str = self._add_device_block_size(
-                global_blocksize_removed, dev_str, device
+
+        if self.slc_stress_test:
+            dev_str = self._add_slc_stress_fio_options(dev_str, drives)
+        else:
+            numa_cpu_nodes = None
+            for device in drives:
+                device_name = self._get_device_name_for_test(device)
+
+                if cpu_drive_mapping:
+                    numa_cpu_nodes = next(
+                        (
+                            key
+                            for key, value in cpu_drive_mapping.items()
+                            if device_name in [str(v) for v in value]
+                        ),
+                        None,
+                    )
+                dev_str = self._add_device_fio_options(
+                    dev_str,
+                    device_name,
+                    filesystem,
+                    directory,
+                    idx,
+                    _size,
+                    files,
+                    global_blocksize_removed,
+                    numa_cpu_nodes,
+                )
+                idx += 1
+            # For tests executed from BG runner
+            dev_str = self._add_boot_drive_fio_options(
+                dev_str, drives, precondition, _size, idx, files
             )
-            dev_str += "new_group=1\n"
-            idx += 1
-        # For tests executed from BG runner
-        if self.test_boot_drive and str(self.boot_drive) not in str(drives):
-            if self.boot_drive != "" and str(self.boot_drive) != "rootfs":
-                dev_str += "[job%d]\n" % idx
-                dev_str += "new_group=1\n"
-                if DiskUtils.is_drive_mounted(self.host, str(self.boot_drive)):
-                    _file = files["file"] if files else FioRunner.MOUNTED_DRIVE_FIO_PATH
-                    dev_str += "filename=%s\n" % _file
-                    file_size = self._create_file(self.boot_drive, _file, _size)
-                    dev_str += "size=%s\n" % file_size
-                    dev_str += "fdatasync=1\n"
-                else:
-                    dev_str += "filename=/dev/%s\n" % str(self.boot_drive)
+
         if not job_name:
             job_name = templ_filename
         job_file = os.path.join(self.tmp_logdir, job_name)
@@ -533,8 +526,54 @@ class FioRunner(TestUtilsBase):
         # Copy fio job file to result log directory
         with ignored(Exception, exception_string="already exists"):
             self.host.put_file(job_file, dest_job_file)
-        AutovalLog.log_info("Job file used: %s" % dest_job_file)
+        AutovalLog.log_info(f"Job file used: {dest_job_file}")
+
+        if not precondition:
+            self._current_test_params.update(
+                {"global_params": self.get_global_values_dict(dev_str)}
+            )
+
         return dest_job_file
+
+    def _process_template(
+        self, templ_path: str, replace: dict[str, str], file_path: bool
+    ) -> Tuple[str, str]:
+        """
+        Process template file and create dev string
+
+        Args:
+            templ_path: Path to template file
+            replace: Dictionary of key-value pairs to replace in template file
+
+        Returns:
+            Dev string and size
+        """
+        if file_path:
+            content = FileActions.read_data(templ_path, host=self.host)
+        else:
+            content = FileActions.read_data(templ_path)
+        _size = ""
+        for key, value in replace.items():
+            regex_var = re.compile(f"\\${{{key}}}", re.MULTILINE)
+            content = re.sub(regex_var, f"{value}", content)
+            regex = re.compile(f"={key}", re.MULTILINE)
+            content = re.sub(regex, f"={value}", content)
+            if key == "SIZE":
+                _size = value
+            if key == "RUNTIME":
+                self.fio_timeout = DiskUtils.get_seconds(value) + 600
+            # when allow_mounted_write value is passed as a argument value
+            if key == "ALLOW_MOUNTED_WRITE":
+                content = content + key.lower() + "=" + str(value)
+        dev_str = content + "\n"
+
+        if self.skip_direct:
+            if "direct=1" in dev_str:
+                dev_str = dev_str.replace("direct=1", "direct=0")
+            else:
+                dev_str += "direct=0\n"
+
+        return dev_str, _size
 
     def _remove_gloabal_blocksize(self, dev_str: str) -> Tuple[str, bool]:
         """
@@ -552,8 +591,155 @@ class FioRunner(TestUtilsBase):
 
         return (dev_str, False)
 
+    def _get_device_name_for_test(self, device: str | Drive) -> str:
+        """
+        Get device name for testing based on test_generic_drives flag.
+
+        Args:
+            device: Device object or device name string
+
+        Returns:
+            Device name string (either block_name or generic_name)
+
+        Raises:
+            TestError: If unable to get generic name for drive when test_generic_drives is True
+        """
+        if isinstance(device, Drive):
+            device_name = (
+                device.generic_name if self.test_generic_drives else device.block_name
+            )
+        else:
+            device_name = str(device)
+
+        if self.test_generic_drives and not device_name.startswith("ng"):
+            raise TestError(
+                f"Unable to get generic name for drive {device}",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.DRIVE_ERR,
+            )
+
+        return device_name
+
+    def _add_device_fio_options(
+        self,
+        dev_str: str,
+        device: str,
+        filesystem: Optional[bool],
+        directory: Optional[bool],
+        idx: int,
+        _size: str,
+        files: Optional[dict[str, str]],
+        global_blocksize_removed: bool,
+        numa_cpu_nodes: Optional[str] = None,
+    ) -> str:
+        """
+        Add device fio options to dev_str
+
+        Args:
+            dev_str: String containing dev_str
+            device: Device name
+            filesystem: Filesystem type
+            directory: Directory name
+            idx: Index of device
+            _size: Size of device
+            files: Files to be used for fio
+
+        Returns:
+            String with device fio options added
+        """
+        if filesystem:
+            dev_str += f"[job{idx}]\n"
+            _file = f"/mnt/fio_test_{device}/file1"
+            dev_str += f"filename={_file}\n"
+            dev_str += "fdatasync=1\n"
+            # if size specified as %, create file,
+            # otherwise fio will not be able to create file and it will fail
+            file_size = self._create_file(device, _file, _size)
+        elif directory:
+            dev_str += f"[d{idx}]\n"
+            dev_str += f"directory={device}\n"
+            dev_str += "fdatasync=1\n"
+        else:
+            dev_str += f"[job{idx}]\n"
+            if numa_cpu_nodes:
+                dev_str += f"numa_cpu_nodes={numa_cpu_nodes}\n"
+            if str(device) == str(self.boot_drive):
+                if self.boot_drive_partitioned:
+                    dev_str += f"filename={self.get_boot_drive_fio_partition()}\n"
+                    dev_str += "fdatasync=1\n"
+
+                elif DiskUtils.is_drive_mounted(self.host, str(self.boot_drive)):
+                    if not _size:
+                        _size = "100%"
+                    # Safety write to boot drive
+                    if files:
+                        _file = files["file"]
+                    else:
+                        _file = FioRunner.MOUNTED_DRIVE_FIO_PATH
+                    dev_str += f"filename={_file}\n"
+                    file_size = self._create_file(device, _file, _size)
+                    dev_str += f"size={file_size}\n"
+                    dev_str += "fdatasync=1\n"
+                else:
+                    dev_str += f"filename=/dev/{str(self.boot_drive)}\n"
+            else:
+                # use raw device
+                dev_str += f"filename=/dev/{str(device)}\n"
+
+        dev_str = self._add_device_block_size(global_blocksize_removed, dev_str, device)
+        dev_str += "new_group=1\n"
+
+        return dev_str
+
+    def _add_slc_stress_fio_options(
+        self, dev_str: str, drives: list[str | Drive]
+    ) -> str:
+        """
+        Add SLC stress fio options to dev_str for each drive.
+
+        For each drive the function creates two job sections:
+        1. A write job
+        2. A trim job
+
+        Args:
+            dev_str: Base string containing the fio job definitions.
+            drives: List of drive names or Drive objects.
+
+        Returns:
+            The updated job string with the two job sections added for each drive.
+        """
+        idx = 0
+        flow_id = 1
+        for device in drives:
+            device_name = self._get_device_name_for_test(device)
+
+            job_definitions = (
+                f"\n[job{idx}]\n"
+                "rw=randwrite\n"
+                f"filename=/dev/{device_name}\n"
+                f"flow_id={flow_id}\n"
+                "flow=1\n"
+                "new_group=1\n"
+            )
+            idx += 1
+
+            job_definitions += (
+                f"\n[job{idx}]\n"
+                "rw=randtrim\n"
+                f"filename=/dev/{device_name}\n"
+                f"flow_id={flow_id}\n"
+                "flow=2\n"
+                "new_group=1\n"
+            )
+            idx += 1
+            flow_id += 1
+
+            dev_str += job_definitions
+
+        return dev_str
+
     def _add_device_block_size(
-        self, global_blocksize_removed: bool, dev_str: str, device: Union[str, Drive]
+        self, global_blocksize_removed: bool, dev_str: str, device: str | Drive
     ) -> str:
         """
         Add device block size to dev_str
@@ -578,28 +764,50 @@ class FioRunner(TestUtilsBase):
 
         return dev_str
 
-    def get_jobfile_templates_path(self) -> str:
+    def _add_boot_drive_fio_options(
+        self,
+        dev_str: str,
+        drives: list[str | Drive],
+        precondition: bool,
+        _size: str,
+        idx: int,
+        files: Optional[dict[str, str]],
+    ) -> str:
         """
-        Return path to the jobfile_templates/ directory.
+        Add boot drive fio options to dev_str
+
+        Args:
+            dev_str: String containing dev_str
+            drives: List of drives
+            precondition: Flag indicating if test is precondition
+            _size: Size of device
+            idx: Index of device
+            files: Files to be used for fio
 
         Returns:
-            The path to the jobfile_templates/ directory.
-
-        Raises:
-            TestError: jobfile_templates/ directory can't be detected because the current
-            file is not located in a path with a lib/ subdirectory.
+            String with boot drive fio options added
         """
-        current_file_path = os.path.abspath(__file__)
-        pattern = r"^(/.*?/lib)"
-        match = re.search(pattern, current_file_path)
-        if not match:
-            raise TestError(
-                "Unable to determine path to fio jobfile_templates directory.\n"
-                f"Directory 'lib/' missing from path '{current_file_path}' of current file '{__file__}'.\n"
-                "This is likely caused by an AutoVal build or packaging issue."
-            )
-        lib_path = match.group(1)
-        return os.path.join(lib_path, "utils/jobfile_templates")
+        if (
+            self.test_boot_drive
+            and str(self.boot_drive) not in str(drives)
+            and (not precondition or self.boot_drive_precondition)
+        ):
+            if self.boot_drive != "" and str(self.boot_drive) != "rootfs":
+                dev_str += f"[job{idx}]\n"
+                dev_str += "new_group=1\n"
+                if self.boot_drive_partitioned:
+                    dev_str += f"filename={self.get_boot_drive_fio_partition()}\n"
+                    dev_str += "fdatasync=1\n"
+
+                elif DiskUtils.is_drive_mounted(self.host, str(self.boot_drive)):
+                    _file = files["file"] if files else FioRunner.MOUNTED_DRIVE_FIO_PATH
+                    dev_str += f"filename={_file}\n"
+                    file_size = self._create_file(self.boot_drive, _file, _size)
+                    dev_str += f"size={file_size}\n"
+                    dev_str += "fdatasync=1\n"
+                else:
+                    dev_str += f"filename=/dev/{str(self.boot_drive)}\n"
+        return dev_str
 
     def _create_file(self, device: str, _file: str, _size: str):
         """
@@ -649,7 +857,12 @@ class FioRunner(TestUtilsBase):
         return file_size
 
     def run_fio_on_dut(
-        self, job, opts=None, remote: bool = False, timeout: int = 86400
+        self,
+        job,
+        opts=None,
+        remote: bool = False,
+        timeout: int = 86400,
+        precondition: bool = False,
     ):
         """Runs FIO.
 
@@ -659,22 +872,17 @@ class FioRunner(TestUtilsBase):
 
         Parameter
         ----------
-        job               : String
-            FIO Job file name.
-        opts              : String
-            Options for fio tool. Here default value is None
-        remote : Boolean
-            Set the flag to run fio jobs in remote location. Here default
+        job: FIO Job file name.
+        opts: Options for fio tool. Here default value is None
+        remote: Set the flag to run fio jobs in remote location. Here default
             value is false.
-        timeout          : Integer
-             Set the default timeout for the fio job
+        timeout: Set the default timeout for the fio job
+        precondition: Flag to indicate if the fio job is a precondition job.
 
         Returns
         -------
-        ret               : Boolean
-             Flag will sets based on error code availability.
-        tmp_output_file   : String
-             FIO result output file.
+        ret: Flag will sets based on error code availability.
+        tmp_output_file: FIO result output file.
         """
         _time = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         filename = f"fio_{self.host.hostname}_{_time}.json"
@@ -692,6 +900,7 @@ class FioRunner(TestUtilsBase):
             fio_command=cmd,
             working_dir=self.resultsdir,
             timeout=timeout,
+            precondition=precondition,
         )
         # collect workload slice sys fs data
         self.collect_prefix_cmd_specific_logs(FioRunner.prefix_command_name, 0)
@@ -741,6 +950,10 @@ class FioRunner(TestUtilsBase):
             trigger_timeout,
             self.host.oob.get_fio_trigger_cmd(power_cycle, remote=remote),
         )
+        if self.power_trigger_prefix:
+            power_cmd = power_cmd.replace(
+                "--trigger='", f"--trigger='{self.power_trigger_prefix}; "
+            )
         output_file = os.path.join(
             self.resultsdir, f"fio_{self.host.hostname}_{_time}.json"
         )
@@ -773,7 +986,7 @@ class FioRunner(TestUtilsBase):
                     component=COMPONENT.SYSTEM,
                     error_type=ErrorType.TOOL_ERR,
                 )
-        self.host.check_system_health()
+        self.host.system_health_check(current_reboot, 1200)
         if check_parse_fio_error:
             ret = self.parse_fio_error(1, _msg, output_file)
         return ret, output_file
@@ -781,7 +994,8 @@ class FioRunner(TestUtilsBase):
     def get_precondition_drives(self):
         """Return data drives for FIO precondition job"""
         _drives = self.get_drives("ssd", None, self.drives)
-        _drives = [d for d in _drives if str(d) != str(self.boot_drive)]
+        if not self.boot_drive_precondition:
+            _drives = [d for d in _drives if str(d) != str(self.boot_drive)]
         return _drives
 
     def start_test(self) -> None:
@@ -808,7 +1022,9 @@ class FioRunner(TestUtilsBase):
             self.boot_drive = DiskUtils.get_boot_drive(
                 self.host, self.boot_drive_physical_location
             )
-        by_model = StorageUtils.group_drive_by_attr("model", self.drives)
+        by_model = StorageUtils.group_drive_by_attr(
+            "model", self.drives, generic=self.test_generic_drives
+        )
         write_iops = {}
         read_iops = {}
         latency_ms = {}
@@ -819,86 +1035,23 @@ class FioRunner(TestUtilsBase):
             for io_type, params in self.run_definition.items():
                 additional_args = self.gen_args(params["args"])
                 precondition_loops = params.get("precondition_loops", 0)
-                filesystem = params.get("filesystem", False)
-                files = params.get("files", None)
-                skip_fs = params.get("skip_fs", False)
                 remote = params.get("remote", False)
-                filesystem_type = params.get("filesystem_type", "xfs")
-                filesystem_options = params.get("filesystem_options", "")
+
+                if precondition_loops:
+                    self.run_precondition(params, precondition_loops, remote, fio_opts)
+
                 for additional_arg in additional_args:
-                    if precondition_loops:
-                        _drives = self.get_precondition_drives()
-                        AutovalUtils.validate_non_empty_list(
-                            _drives,
-                            "Drives for precondition",
-                            log_on_pass=False,
-                            component=COMPONENT.STORAGE_DRIVE,
-                            error_type=ErrorType.SYSTEM_ERR,
-                        )
-                        # Secure_erase all drives
-                        StorageUtils.format_all_drives(_drives)
-                        # If file specific Precondition file is provided, use that
-                        # else, Use the default precondition
-                        precondition_template = params.get(
-                            "precondition_template", "precondition.fio"
-                        )
-                        AutovalLog.log_info(
-                            f"Starting precondition on drives: {_drives}"
-                        )
-                        # Preconditioning on ssd drives
-                        self.precondition_drives(
-                            _drives,
-                            precondition_loops,
-                            precondition_template,
-                            remote,
-                            fio_opts,
-                        )
                     alias = self.generate_job_name(io_type, cycle, additional_arg)
-                    job_file = alias + ".fio"
-                    job = self.create_fio_job(
-                        files=files,
-                        drive_type=self.drive_type,
-                        drive_interface=self.drive_interface,
-                        drives=self.drives,
-                        replace=additional_arg,
-                        templ_filename=params["template"],
-                        job_name=job_file,
-                        filesystem=filesystem,
-                        filesystem_type=filesystem_type,
-                        filesystem_options=filesystem_options,
-                        skip_fs=skip_fs,
+                    fio_return_dict = self._create_fio_job_and_run(
+                        alias, additional_arg, params, remote, fio_opts
                     )
-                    AutovalLog.log_info("Starting fio on DUT")
-                    # The if condition is for running fio with power trigger
-                    # command and else condition is for the normal fio job.
-                    if self.power_trigger:
-                        result, output_file = self.run_interupted_fio(
-                            job, self.power_cycle, remote=remote
-                        )
-                    else:
-                        result, output_file = self.run_fio_on_dut(
-                            job, remote=remote, opts=fio_opts, timeout=self.fio_timeout
-                        )
+                    result = fio_return_dict.get("result", None)
+                    output_file = fio_return_dict.get("output_file", None)
+                    by_model = fio_return_dict.get("by_model", by_model)
+
                     self.fio_file = output_file
-                    AutovalUtils.validate_condition(
-                        result,
-                        "Ran fio on %s" % output_file,
-                        component=COMPONENT.STORAGE_DRIVE,
-                        error_type=ErrorType.TOOL_ERR,
-                    )
-                    results = self.parse_results()
-                    if self.enable_performance_metrics_validation:
-                        self.validate_performance_metrics(
-                            results=results, _type="", by_model=by_model
-                        )
-                    result_dict = {"fio_" + alias: results}
-                    FioRunner.raw_result.update(result_dict)
-                    AutovalUtils.result_handler.add_test_results(result_dict)
-                    AutovalUtils.validate_condition(
-                        results,
-                        "Saved results for fio run",
-                        component=COMPONENT.STORAGE_DRIVE,
-                        error_type=ErrorType.TOOL_ERR,
+                    results = self.get_parsed_results(
+                        result, output_file, alias, by_model
                     )
                     # filter results for future compare by cycle and model
                     write_iops, write_iops_model = self.filter_results_by_param(
@@ -910,49 +1063,167 @@ class FioRunner(TestUtilsBase):
                     latency_ms, latency_ms_model = self.filter_results_by_param(
                         results, "latency_ms_100", latency_ms, by_model
                     )
-                    if write_iops_model and not self.skip_iops:
-                        AutovalLog.log_info("Compare write iops by model:")
-                        self.check_iops(
-                            iops=write_iops_model,
-                            _type="",
-                            _by_model_or_cycle="model",
-                            _read_or_write="write",
-                        )
-                    if read_iops_model and not self.skip_iops:
-                        AutovalLog.log_info("Compare read iops by model:")
-                        self.check_iops(
-                            iops=read_iops_model,
-                            _type="",
-                            _by_model_or_cycle="model",
-                            _read_or_write="read",
-                        )
-                    if latency_ms_model:
-                        AutovalLog.log_info("Checking latency_ms threshold by model")
-                        self.check_latency_ms(
-                            latency_ms_model, _type="", _by_model_or_cycle="model"
-                        )
+                    self.compare_iops(
+                        write_iops_model,
+                        read_iops_model,
+                        latency_ms_model,
+                        by_model=True,
+                    )
         # Compare results by cycle at the end
-        if write_iops and not self.skip_iops:
-            AutovalLog.log_info("Compare write iops by cycle:")
-            self.check_iops(
-                iops=write_iops,
-                _type="",
-                _by_model_or_cycle="cycle",
-                _read_or_write="write",
-            )
-        if read_iops and not self.skip_iops:
-            AutovalLog.log_info("Compare read iops by cycle:")
-            self.check_iops(
-                iops=read_iops,
-                _type="",
-                _by_model_or_cycle="cycle",
-                _read_or_write="read",
-            )
-        if latency_ms:
-            AutovalLog.log_info("Checking latency_ms threshold by cycle:")
-            self.check_latency_ms(latency_ms, _type="", _by_model_or_cycle="cycle")
-
+        self.compare_iops(write_iops, read_iops, latency_ms, by_model=False)
         self.update_result()
+
+    def _create_fio_job_and_run(
+        self,
+        alias: str,
+        additional_arg: Any,
+        params: dict[str, Any],
+        remote: bool,
+        fio_opts: str | None,
+        cpu_drive_mapping: Optional[dict[str, list[str]]] = None,
+    ) -> dict[str, Any]:
+        """
+        Create fio job and run on DUT.
+
+        Args:
+        alias: Alias name for the job.
+        additional_arg: Additional arguments for the job.
+        params: Test args dict
+        remote: Flag to indicate whether to run the job remotely or locally.
+        fio_opts: Options for the fio tool.
+
+        Returns
+            Dictionary containing the results and output file of the job.
+        """
+        fio_return_dict = {}
+        filesystem = params.get("filesystem", False)
+        files = params.get("files", None)
+        skip_fs = params.get("skip_fs", False)
+        filesystem_type = params.get("filesystem_type", "xfs")
+        filesystem_options = params.get("filesystem_options", "")
+        job_file = alias + ".fio"
+        job = self.create_fio_job(
+            files=files,
+            drive_type=self.drive_type,
+            drive_interface=self.drive_interface,
+            drives=self.drives,
+            replace=additional_arg,
+            templ_filename=params["template"],
+            job_name=job_file,
+            filesystem=filesystem,
+            filesystem_type=filesystem_type,
+            filesystem_options=filesystem_options,
+            skip_fs=skip_fs,
+            cpu_drive_mapping=cpu_drive_mapping,
+        )
+        # Store parameters for RunMeasurements logging
+        self._current_test_params.update(
+            {
+                "template": params.get("template", "unknown"),
+            }
+        )
+
+        AutovalLog.log_info("Starting fio on DUT")
+        # The if condition is for running fio with power trigger
+        # command and else condition is for the normal fio job.
+        if self.power_trigger:
+            result, output_file = self.run_interupted_fio(
+                job, self.power_cycle, remote=remote
+            )
+            by_model = StorageUtils.group_drive_by_attr("model", self.drives)
+            fio_return_dict.update(
+                {"result": result, "output_file": output_file, "by_model": by_model}
+            )
+        else:
+            result, output_file = self.run_fio_on_dut(
+                job, remote=remote, opts=fio_opts, timeout=self.fio_timeout
+            )
+            fio_return_dict.update({"result": result, "output_file": output_file})
+
+        return fio_return_dict
+
+    def get_parsed_results(
+        self,
+        result: bool,
+        output_file: str,
+        alias: str,
+        by_model: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Get parsed results from fio output file.
+
+        Args:
+            result: Flag indicating fio ran successfully
+            output_file: Path to fio output file
+            alias: Name of fio job
+            by_model: Dictionary of drives grouped by model
+
+        Returns:
+            Dictionary of parsed fio results
+        """
+        AutovalUtils.validate_condition(
+            result,
+            f"Ran fio on {output_file}",
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.TOOL_ERR,
+        )
+        self.fio_file = output_file
+        results = self.parse_results()
+        if self.enable_performance_metrics_validation:
+            self.validate_performance_metrics(
+                results=results, _type="", by_model=by_model
+            )
+        result_dict = {"fio_" + alias: results}
+        FioRunner.raw_result.update(result_dict)
+        AutovalUtils.result_handler.add_test_results(result_dict)
+        AutovalUtils.validate_condition(
+            results,
+            "Saved results for fio run",
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.TOOL_ERR,
+        )
+        return results
+
+    def run_precondition(
+        self,
+        params: dict[str, Any],
+        precondition_loops: int,
+        remote: bool,
+        fio_opts: str | None,
+    ) -> None:
+        """
+        Setup drives for preconditioning and run precondition job
+
+        Args:
+            params: parameters for preconditioning
+            precondition_loops: number of loops for preconditioning
+            remote: whether to run preconditioning remotely or locally
+            fio_opts: options for fio tool
+        """
+        _drives = self.get_precondition_drives()
+        AutovalUtils.validate_non_empty_list(
+            _drives,
+            "Drives for precondition",
+            log_on_pass=False,
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.SYSTEM_ERR,
+        )
+        # Secure_erase all drives except boot drive
+        StorageUtils.format_all_drives(
+            [d for d in _drives if str(d) != str(self.boot_drive)]
+        )
+        # If file specific Precondition file is provided, use that
+        # else, Use the default precondition
+        precondition_template = params.get("precondition_template", "precondition.fio")
+        AutovalLog.log_info(f"Starting precondition on drives: {_drives}")
+        # Preconditioning on ssd drives
+        self.precondition_drives(
+            _drives,
+            precondition_loops,
+            precondition_template,
+            remote,
+            fio_opts,
+        )
 
     def update_result(self):
         if FioRunner.prefix_cmd:
@@ -1051,6 +1322,89 @@ class FioRunner(TestUtilsBase):
         """
         clat_percentiles = self.args.get("clat_percentiles", ["99.000000", "99.990000"])
         latency_ms = self.args.get("latency_ms", ["100"])
+        results_data = self.get_result_data_from_dump()
+
+        AutovalLog.log_info("Parsing results: %s" % self.fio_file)
+        fio = {}
+        fio["fio_version"] = results_data["fio version"]
+        # Saving the Input
+        fio.update(
+            AutovalUtils.add_dict_key_prefix(results_data["global options"], "opt_")
+        )
+        fio["result"] = []
+        jobs = results_data["jobs"]
+        for job in jobs:
+            _job_data = {}
+            _job_data["error"] = job["error"]
+            _job_data.update(
+                AutovalUtils.add_dict_key_prefix(job["job options"], "opt_")
+            )
+            _job_data = self.parse_read_write_trim_results(
+                job, _job_data, clat_percentiles
+            )
+            # Adding latency_ms to fio_results
+            if job["latency_ms"]:
+                for lat in latency_ms:
+                    _job_data[f"latency_ms_{lat}"] = job["latency_ms"][lat]
+            fio["result"].append(_job_data)
+
+        return fio
+
+    def parse_read_write_trim_results(
+        self,
+        job: dict[str, Any],
+        _job_data: dict[str, Any],
+        clat_percentiles: list[str],
+    ) -> dict[str, Any]:
+        """
+        This method is used to parse the read, write and trim results.
+
+        Args:
+            job: A dictionary containing the unparsed job data.
+            _job_data: The result dictionary with parsed job data.
+            clat_percentiles: A list of percentile values.
+
+        Returns:
+            A dictionary containing the parsed job data.
+        """
+        for r_w in ["read", "write", "trim"]:
+            if job[r_w] is None or ("runtime" in job[r_w] and job[r_w]["runtime"] == 0):
+                continue
+            jobname = job["jobname"]
+            perf = {}
+            for field in ["bw", "bw_agg", "bw_max", "bw_min", "bw_mean"]:
+                perf[f"{field} (Kb/s)"] = job[r_w][field]
+                _job_data[f"{r_w}_{field}"] = job[r_w][field]
+            for field in ["iops", "total_ios"]:
+                perf[f"{field}"] = int(job[r_w][field])
+                _job_data[f"{r_w}_{field}"] = int(job[r_w][field])
+            for lat in ["mean", "min", "max"]:
+                if "lat_ns" in job[r_w]:
+                    _job_data[f"{r_w}_{lat}_lat"] = job[r_w]["lat_ns"][lat]
+                    perf[f"lat_{lat} (nsec)"] = job[r_w]["lat_ns"][lat]
+            for clat_perc in clat_percentiles:
+                if "percentile" in job[r_w]["clat_ns"]:
+                    if clat_perc in job[r_w]["clat_ns"]["percentile"].keys():
+                        if "clat_ns" in job[r_w]:
+                            _job_data[f"{r_w}_{clat_perc}"] = job[r_w]["clat_ns"][
+                                "percentile"
+                            ][clat_perc]
+                            perf[f"{clat_perc}%"] = job[r_w]["clat_ns"]["percentile"][
+                                clat_perc
+                            ]
+            AutovalLog.log_debug(f"\n{jobname} -- {r_w}")
+            AutovalLog.log_debug(
+                ", ".join(f"{key}: {value}" for key, value in perf.items())
+            )
+        return _job_data
+
+    def get_result_data_from_dump(self) -> dict[str, Any]:
+        """
+        This method is used to get the result data from dump.
+
+        Returns:
+            Result data in the form of dictionary.
+        """
         fio_output = os.path.join(self.tmp_logdir, os.path.basename(self.fio_file))
         self.host.get_file(self.fio_file, fio_output)
         out = FileActions.read_data(fio_output)
@@ -1090,59 +1444,7 @@ class FioRunner(TestUtilsBase):
                     component=COMPONENT.STORAGE_DRIVE,
                     error_type=ErrorType.TOOL_ERR,
                 )
-        AutovalLog.log_info("Parsing results: %s" % self.fio_file)
-        fio = {}
-        perf = {}
-        fio["fio_version"] = results_data["fio version"]
-        # Saving the Input
-        fio.update(
-            AutovalUtils.add_dict_key_prefix(results_data["global options"], "opt_")
-        )
-        fio["result"] = []
-        jobs = results_data["jobs"]
-        for job in jobs:
-            _job_data = {}
-            _job_data["error"] = job["error"]
-            _job_data.update(
-                AutovalUtils.add_dict_key_prefix(job["job options"], "opt_")
-            )
-            for r_w in ["read", "write", "trim"]:
-                if job[r_w] is None or (
-                    "runtime" in job[r_w] and job[r_w]["runtime"] == 0
-                ):
-                    continue
-                jobname = job["jobname"]
-                perf = {}
-                for field in ["bw", "bw_agg", "bw_max", "bw_min", "bw_mean"]:
-                    perf["%s (Kb/s)" % field] = job[r_w][field]
-                    _job_data[f"{r_w}_{field}"] = job[r_w][field]
-                for field in ["iops", "total_ios"]:
-                    perf["%s" % field] = int(job[r_w][field])
-                    _job_data[f"{r_w}_{field}"] = int(job[r_w][field])
-                for lat in ["mean", "min", "max"]:
-                    if "lat_ns" in job[r_w]:
-                        _job_data[f"{r_w}_{lat}_lat"] = job[r_w]["lat_ns"][lat]
-                        perf["lat_%s (nsec)" % lat] = job[r_w]["lat_ns"][lat]
-                for clat_perc in clat_percentiles:
-                    if "percentile" in job[r_w]["clat_ns"]:
-                        if clat_perc in job[r_w]["clat_ns"]["percentile"].keys():
-                            if "clat_ns" in job[r_w]:
-                                _job_data[f"{r_w}_{clat_perc}"] = job[r_w]["clat_ns"][
-                                    "percentile"
-                                ][clat_perc]
-                                perf[f"{clat_perc}%"] = job[r_w]["clat_ns"][
-                                    "percentile"
-                                ][clat_perc]
-                AutovalLog.log_debug(f"\n{jobname} -- {r_w}")
-                AutovalLog.log_debug(
-                    ", ".join(f"{key}: {value}" for key, value in perf.items())
-                )
-            # Adding latency_ms to fio_results
-            if job["latency_ms"]:
-                for lat in latency_ms:
-                    _job_data[f"latency_ms_{lat}"] = job["latency_ms"][lat]
-            fio["result"].append(_job_data)
-        return fio
+        return results_data
 
     def trim(self, drives, opts=None, mnt: str = "/mnt/autoval") -> None:
         """Performs Random Trim Fio Jobs.
@@ -1241,7 +1543,7 @@ class FioRunner(TestUtilsBase):
         remote,
         fio_opts=None,
         mnt: str = "/mnt/autoval",
-        precondition_params: Optional[Dict[str, str]] = None,
+        precondition_params: Optional[dict[str, str]] = None,
     ) -> None:
         """Performs Precondition Fio Jobs.
 
@@ -1260,7 +1562,7 @@ class FioRunner(TestUtilsBase):
             Set the flag to run fio jobs in remote location.
         fio_opts: String
             fio command line options
-        precondition_params : Dict
+        precondition_params : dict
             Can be modified with string replace methods.
 
         Raises
@@ -1271,54 +1573,18 @@ class FioRunner(TestUtilsBase):
         # Save value
         saved = self.skip_iops
         self.skip_iops = True
-        # unmount the drives if already mounted before running preconditioning on them
-        AutovalLog.log_info("Unmount drives for precondition")
-        for dev in drives:
-            if mnt == "/mnt/autoval":
-                mnt = f"{mnt}_{dev}"
-            if FilesystemUtils.is_mounted(self.host, mnt):
-                FilesystemUtils.unmount(self.host, mnt)
+
+        self.unmount_drives(drives, mnt)
         # If file specific (random/seq) Precondition file exists, use that
         # else, Use the default precondition
         write_iops = {}
         read_iops = {}
         latency_ms = {}
+        self.precondition_params = precondition_params or {}
         by_model = StorageUtils.group_drive_by_attr("model", drives)
         for _cycle in range(1, precondition_loops + 1):
-            job = self.create_fio_job(
-                drives=drives,
-                replace=precondition_params or {},
-                templ_filename=precondition_template,
-            )
-            AutovalLog.log_info("Starting preconditioning cycle %s on DUT" % _cycle)
-            result, output_file = self.run_fio_on_dut(
-                job=job,
-                remote=remote,
-                timeout=self.fio_timeout,
-                opts=fio_opts,
-            )
-            self.fio_file = output_file
-            AutovalUtils.validate_condition(
-                result,
-                "Precondition fio job %s" % output_file,
-                component=COMPONENT.STORAGE_DRIVE,
-                error_type=ErrorType.TOOL_ERR,
-            )
-            results = self.parse_results()
-            if self.enable_performance_metrics_validation:
-                self.validate_performance_metrics(
-                    results=results, _type="precondition", by_model=by_model
-                )
-            result_dict = {
-                "precondition_" + str(_cycle) + str(int(time.time())): results
-            }
-            FioRunner.raw_result.update(result_dict)
-            AutovalUtils.result_handler.add_test_results(result_dict)
-            AutovalUtils.validate_condition(
-                results,
-                "Saved results for precondition fio job",
-                component=COMPONENT.STORAGE_DRIVE,
-                error_type=ErrorType.TOOL_ERR,
+            results = self.run_precondition_fio_job(
+                _cycle, drives, precondition_template, remote, fio_opts, by_model
             )
             # filter results for future compare by cycle and model
             write_iops, write_iops_model = self.filter_results_by_param(
@@ -1330,53 +1596,145 @@ class FioRunner(TestUtilsBase):
             latency_ms, latency_ms_model = self.filter_results_by_param(
                 results, "latency_ms", latency_ms, by_model
             )
-            if write_iops_model or read_iops_model:
-                AutovalLog.log_info("Compare precondition iops by model:")
-            if write_iops_model:
-                self.check_iops(
-                    iops=write_iops_model,
-                    _type="precondition",
-                    _by_model_or_cycle="model",
-                    _read_or_write="write",
-                )
-            if read_iops_model:
-                self.check_iops(
-                    iops=read_iops_model,
-                    _type="precondition",
-                    _by_model_or_cycle="model",
-                    _read_or_write="read",
-                )
-            if latency_ms_model:
-                AutovalLog.log_info(
-                    "Checking precondition latency_ms threshold by model:"
-                )
-                self.check_latency_ms(
-                    latency_ms_model, _type="precondition", _by_model_or_cycle="model"
-                )
-            # Compare results by cycle at the end
+            self.compare_iops(
+                write_iops_model,
+                read_iops_model,
+                latency_ms_model,
+                by_model=True,
+                fio_type="precondition",
+            )
+
+        self.compare_iops(
+            write_iops, read_iops, latency_ms, by_model=False, fio_type="precondition"
+        )
+        # Revert back
+        self.skip_iops = saved
+
+    def unmount_drives(self, drives: list[Drive | str], mnt: str) -> None:
+        """
+        Unmounts the drives if they are already mounted.
+
+        Args:
+            drives: List of SSD drives present on the host.
+            mnt: Mount point to unmount the drives.
+        """
+        AutovalLog.log_info("Unmount drives for precondition")
+        for dev in drives:
+            if mnt == "/mnt/autoval":
+                mnt = f"{mnt}_{dev}"
+            if FilesystemUtils.is_mounted(self.host, mnt):
+                FilesystemUtils.unmount(self.host, mnt)
+
+    def run_precondition_fio_job(
+        self,
+        _cycle: int,
+        drives: list[Drive | str],
+        precondition_template: str,
+        remote: bool,
+        fio_opts: str | None,
+        by_model: dict[str, list[str]],
+    ) -> dict[str, Any]:
+        """
+        Runs the precondition fio job on the DUT.
+
+        Args:
+            _cycle: Cycle number of the precondition fio job.
+            drives: List of SSD drives present on the host.
+            precondition_template: Precondition fio template file.
+            remote: Boolean flag to run the fio job in remote location.
+            fio_opts: Fio command line options.
+            by_model: Boolean flag to group the drives by model.
+
+        Returns:
+            Dictionary containing the results of the precondition fio job.
+        """
+        # If precondition_template is a string with parameters to replace, use it directly or otherwise, treat it as a filename
+        replace_params = {}
+        if hasattr(self, "precondition_params") and isinstance(
+            self.precondition_params, dict
+        ):
+            replace_params = self.precondition_params
+
+        job = self.create_fio_job(
+            drives=drives,
+            replace=replace_params,
+            templ_filename=precondition_template,
+            precondition=True,
+        )
+        AutovalLog.log_info(f"Starting preconditioning cycle {_cycle} on DUT")
+        result, output_file = self.run_fio_on_dut(
+            job=job,
+            remote=remote,
+            timeout=self.fio_timeout,
+            opts=fio_opts,
+            precondition=True,
+        )
+        self.fio_file = output_file
+        AutovalUtils.validate_condition(
+            result,
+            f"Precondition fio job {output_file}",
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.TOOL_ERR,
+        )
+        results = self.parse_results()
+        if self.enable_performance_metrics_validation:
+            self.validate_performance_metrics(
+                results=results, _type="precondition", by_model=by_model
+            )
+        result_dict = {"precondition_" + str(_cycle) + str(int(time.time())): results}
+        FioRunner.raw_result.update(result_dict)
+        AutovalUtils.result_handler.add_test_results(result_dict)
+        AutovalUtils.validate_condition(
+            results,
+            "Saved results for precondition fio job",
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.TOOL_ERR,
+        )
+        return results
+
+    def compare_iops(
+        self,
+        write_iops,
+        read_iops,
+        latency_ms,
+        by_model: bool = False,
+        fio_type: str = "",
+    ) -> None:
+        """
+        Compare iops by model or by cycle.
+
+        Args:
+            write_iops: Dictionary containing write iops for each drive.
+            read_iops: Dictionary containing read iops for each drive.
+            latency_ms: Dictionary containing latency_ms for each drive.
+            by_model: Boolean flag to group the drives by model.
+            fio_type: Type of workload ran
+
+        """
+        _by_model_or_cycle = "model" if by_model else "cycle"
         if write_iops or read_iops:
-            AutovalLog.log_info("Compare precondition iops by cycle:")
-        if write_iops:
+            AutovalLog.log_info(f"Compare {fio_type} iops by {_by_model_or_cycle}:")
+        if write_iops and (fio_type or not self.skip_iops):
             self.check_iops(
                 iops=write_iops,
-                _type="precondition",
-                _by_model_or_cycle="cycle",
+                _type=fio_type,
+                _by_model_or_cycle=_by_model_or_cycle,
                 _read_or_write="write",
             )
-        if read_iops:
+        if read_iops and (fio_type or not self.skip_iops):
             self.check_iops(
                 iops=read_iops,
-                _type="precondition",
-                _by_model_or_cycle="cycle",
+                _type=fio_type,
+                _by_model_or_cycle=_by_model_or_cycle,
                 _read_or_write="read",
             )
         if latency_ms:
-            AutovalLog.log_info("Checking latency_ms threshold by cycle")
-            self.check_latency_ms(
-                latency_ms, _type="precondition", _by_model_or_cycle="cycle"
+            AutovalLog.log_info(
+                f"Checking {fio_type} latency_ms threshold by {_by_model_or_cycle}:"
             )
-        # Revert back
-        self.skip_iops = saved
+            self.check_latency_ms(
+                latency_ms, _type=fio_type, _by_model_or_cycle=_by_model_or_cycle
+            )
 
     def generate_job_name(self, io_type, cycle, additional_arg) -> str:
         """Constructs Job Name.
@@ -1541,7 +1899,7 @@ class FioRunner(TestUtilsBase):
 
         Parameters
         ----------
-        latency_ms: Dict
+        latency_ms: dict
              Contains the values of the latency_ms for all drives
              or models.
         """
@@ -1572,7 +1930,7 @@ class FioRunner(TestUtilsBase):
 
     def filter_results_by_param(
         self, results: dict, _filter: str, filter_results: dict, by_model: dict
-    ) -> tuple[dict, dict]:
+    ) -> Tuple[dict, dict]:
         """
         Filter results by params.
 
@@ -1581,32 +1939,27 @@ class FioRunner(TestUtilsBase):
 
         Parameters
         ----------
-        results: Dict
+        results: dict
              Fio parse Results.
         _filter: String
              Parameter whose values are to filtered.
-        results: Dict
+        results: dict
              Storage reference where the values of the parameter are to be stored.
-        by_model: Dict
+        by_model: dict
              Contains map of model and drives respective to the model.
 
         Returns
         -------
-        filter_results: Dict
+        filter_results: dict
              Contains the fio parameter values from fio parse results
              for all drives.
-        filter_results_by_model: Dict
+        filter_results_by_model: dict
              Contains the fio parameter values from fio parse results
              grouped by model
         """
         filter_results_by_model = {}
-        key_gen = lambda x: (
-            os.path.join("/dev", self.boot_drive)
-            if os.path.basename(FioRunner.MOUNTED_DRIVE_FIO_PATH) in x
-            else x
-        )
         key_value_list = [
-            (key_gen(i["opt_filename"]), i[_filter])
+            (self.key_gen(i["opt_filename"]), i[_filter])
             for i in results["result"]
             if _filter in i and i[_filter] is not None
         ]
@@ -1624,12 +1977,28 @@ class FioRunner(TestUtilsBase):
                 filter_results_by_model[model] = values
         return filter_results, filter_results_by_model
 
+    def key_gen(self, file_name: str) -> str:
+        """
+        Generate dict key based on the file path
+
+        Args:
+            file_name: File name for which the key is needed
+
+        Return:
+            The generated Key
+
+        """
+        if os.path.basename(FioRunner.MOUNTED_DRIVE_FIO_PATH) in file_name:
+            return os.path.join("/dev", self.boot_drive)
+        return file_name
+
     def run_fio(
         self,
         host: Host,
         fio_command: str,
-        working_dir: str | None = None,
-        timeout: int | None = None,
+        working_dir: Optional[str] = None,
+        timeout: int = 600,
+        precondition: bool = False,
     ) -> CmdResult:
         kwargs = {
             "cmd": fio_command,
@@ -1792,3 +2161,216 @@ class FioRunner(TestUtilsBase):
         self.host.run(
             cmd=f"rm -f {FioRunner.MOUNTED_DRIVE_FIO_PATH}", ignore_status=True
         )
+        if self.boot_drive_partitioned:
+            self.boot_drive_fio_cleanup()
+
+    def boot_drive_fio_setup(self) -> None:
+        """
+        This method creates a new partition on the boot drive to run fio
+        """
+        root_partition_number = self.get_root_partition_number()
+        original_partition_size = int(
+            self.host.run(
+                f"sfdisk --list --bytes -o Device,Size /dev/{self.boot_drive} 2>/dev/null | grep /dev/{self.boot_drive}p{root_partition_number} | awk '{{print $2}}'",
+            )
+        )
+        new_partition_size = int(original_partition_size - (60 * 1024 * 1024 * 1024))
+        sector_size = int(
+            self.host.run(f"cat /sys/block/{self.boot_drive}/queue/logical_block_size")
+        )
+
+        try:
+            self.host.run(f"btrfs filesystem resize {new_partition_size} /")
+
+        except Exception as e:
+            AutovalLog.log_info(f"Unable to resize filesystem: {e}")
+            AutovalLog.log_info(
+                "Skipping boot drive partition creation and running fio on filesystem"
+            )
+            return
+
+        self.host.run(f"sfdisk --delete /dev/{self.boot_drive} {root_partition_number}")
+
+        # Create new partitions
+        self.host.run(
+            f'echo -e "size={int(new_partition_size/sector_size)}" | sfdisk /dev/{self.boot_drive} --append --force'
+        )
+        self.host.run(
+            f'echo -e "start=" | sfdisk /dev/{self.boot_drive} --append --force'
+        )
+        self.host.run(f"partprobe /dev/{self.boot_drive}")
+
+        AutovalUtils.validate_no_exception(
+            self.get_boot_drive_fio_partition,
+            [],
+            "Boot drive partition for fio created",
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.DRIVE_ERR,
+        )
+
+        self.boot_drive_partitioned = True
+
+    def get_root_partition_number(self) -> int:
+        """
+        This method returns the partition number of the root partition on boot drive
+        """
+        root_partition = self.host.run(
+            "df / | grep -E '/dev/' | awk '{print $1}'"
+        ).strip()
+
+        match = re.match(r"(/dev/.*?)p?(\d+)$", root_partition)
+        if not match:
+            raise TestError(
+                "Could not determine root partition",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.DRIVE_ERR,
+            )
+        root_partition_number = int(match.group(2))
+        return root_partition_number
+
+    def get_boot_drive_fio_partition(self) -> str:
+        """
+        This method returns the partition name of the boot drive for fio
+
+        Returns
+        -------
+            Partition name of the boot drive for fio
+        """
+        fio_partition = self.host.run(
+            f"sfdisk --list -o Device,Size /dev/{self.boot_drive} 2>/dev/null | grep '60G' | awk '{{print $1}}'"
+        )
+        return fio_partition
+
+    def boot_drive_fio_cleanup(self) -> None:
+        """
+        This method deletes the new partitions on the boot drive and revert back to original partition
+        """
+        root_partition_number = self.get_root_partition_number()
+        fio_partition_number = int(self.get_boot_drive_fio_partition().split("p")[1])
+
+        # Delete new partitions
+        self.host.run(f"sfdisk /dev/{self.boot_drive} {fio_partition_number} --delete")
+        self.host.run(f"sfdisk /dev/{self.boot_drive} {root_partition_number} --delete")
+
+        # Create original partitions with default values
+        self.host.run(
+            f'echo -e "start=" | sfdisk /dev/{self.boot_drive} --append --force'
+        )
+        self.host.run(f"partprobe /dev/{self.boot_drive}")
+        self.host.run("btrfs filesystem resize max /")
+        self.boot_drive_partitioned = False
+        AutovalLog.log_info("Boot drive partition for fio deleted")
+
+    def get_global_values_dict(self, dev_str: str) -> dict[str, Any]:
+        """
+        This method returns a dictionary of global values for a given device string.
+
+        Args:
+            dev_str: The device string for which to retrieve global values.
+
+        Returns:
+            dict[str, Any]: A dictionary containing the global values for the given device string.
+        """
+        global_values = {}
+        in_global = False
+
+        for line in dev_str.strip().split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            if line.startswith("[") and line.endswith("]"):
+                section_name = line[1:-1].strip()
+                in_global = section_name == "global"
+                continue
+
+            if in_global and "=" in line:
+                key, value = line.split("=", 1)
+                global_values[key.strip()] = value.strip()
+
+            if not in_global and "in_global" in locals():
+                break
+
+        return global_values
+
+    def format_t10_dix_drives(self) -> None:
+        """
+        Format the Test drives with T10 dix format 4k+64 lbaf
+        """
+        t10_dix_format = "4096+64"
+        for drive in self.drives:
+            current_lbaf_details = NvmeResizeUtil.get_lbaf_details(
+                self.host, drive.block_name
+            )
+            if (
+                current_lbaf_details.get("ms") == 64
+                and current_lbaf_details.get("lbads") == 12
+            ):
+                AutovalLog.log_info(
+                    f"{drive.block_name} already formated to {t10_dix_format}"
+                )
+                continue
+
+            lbaf_to_flbas_map = NvmeResizeUtil.get_lbaf_to_flbas_map(
+                self.host, drive.block_name
+            )
+            lbaf = lbaf_to_flbas_map.get(t10_dix_format, None)
+
+            AutovalUtils.validate_condition(
+                lbaf is not None,
+                f"{drive.block_name} supports {t10_dix_format} format",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.DRIVE_ERR,
+                log_on_pass=False,
+            )
+
+            AutovalUtils.validate_no_exception(
+                NVMeUtils.format_nvme,
+                [self.host, drive.block_name, 0, None, f" -l {lbaf}"],
+                f"{drive.block_name }: Format with lba {t10_dix_format}",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.NVME_ERR,
+            )
+
+    def get_qlc_md_size(self, fio_args_dict: dict[str, Any]) -> str:
+        """
+        Calculate the md_size per io based on the write blocksize.
+
+        - Extracts write block size (second value if comma-separated)
+        - Supports 'K' and 'M' units
+        - Ensures minimum md_size of 1k
+
+        Args:
+            fio_args_dict: Fio args dict containing args for the fio job
+
+        Returns:
+            md_size in kb as string (e.g., '2k')
+        """
+        blocksize_str = str(fio_args_dict.get("BLOCKSIZE", "")).strip()
+        if not blocksize_str:
+            return "1k"
+
+        parts = [p.strip() for p in blocksize_str.split(",") if p.strip()]
+        if not parts:
+            return "1k"
+        if len(parts) >= 2:
+            write_block_str = parts[1]
+        else:
+            write_block_str = parts[0]
+
+        write_block_str = write_block_str.upper()
+        unit = write_block_str[-1]
+        try:
+            value = int(write_block_str.rstrip("KM"))
+        except ValueError:
+            return "1k"
+
+        if unit == "M":
+            write_block_kb = value * 1024
+        elif unit == "K":
+            write_block_kb = value
+        else:
+            write_block_kb = value
+
+        md_size_kb = max(write_block_kb // 64, 1)
+        return f"{md_size_kb}k"

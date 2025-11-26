@@ -5,7 +5,7 @@ import datetime
 import os
 import re
 from collections import defaultdict
-from typing import Dict, List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from autoval.lib.host.component.component import COMPONENT
 
@@ -31,7 +31,7 @@ class StorageUtils:
         drive_type=None,
         drive_interface=None,
         drives=None,
-    ) -> Dict:
+    ) -> dict:
         """
         Port from autotest of StorageUtils.get_test_drives()
 
@@ -164,13 +164,13 @@ class StorageUtils:
         log_dir = drive_args[2]
 
         serial_number = drive.serial_number
-        file_name = "{}.json".format(serial_number)
+        file_name = f"{serial_number}.json"
         FileActions.mkdirs(os.path.join(log_dir, timestamp))
         file_path = os.path.join(log_dir, timestamp, file_name)
         FileActions.write_data(file_path, drive.collect_data(), append=False)
 
     @staticmethod
-    def print_drive_summary(drives: List["Drive"]) -> None:
+    def print_drive_summary(drives: list["Drive"]) -> None:
         grouped_drive_attr = {
             "manufacturer": {
                 # e.g. fill-in
@@ -197,17 +197,33 @@ class StorageUtils:
                     AutovalLog.log_info(f"\t{attr_val}: {drive_list}")
 
     @staticmethod
-    def group_drive_by_attr(attr: str, drives: List["Drive"]) -> Dict[str, List[str]]:
-        """e.g. Return {"SEAGATE": ['sdb', 'sdc', ...], ...}"""
+    def group_drive_by_attr(
+        attr: str, drives: list["Drive"], generic: bool = False
+    ) -> dict[str, list[str]]:
+        """
+        This method groups the drives based on the specified attribute, creating
+        a dictionary where the keys are the attribute values & the values are
+        lists of drive block names or generic names.
+
+        Args:
+            attr: The attribute to group the drives.
+            drives: List of Drive objects.
+            generic: If True, use generic_name instead of block_name. Defaults to False.
+
+        Returns:
+            A dictionary where keys are attribute values & values are lists of
+            drive block names or generic names.
+        """
         grouped = defaultdict(list)
+        name_attr = "generic_name" if generic else "block_name"
         for drive in drives:
             grouped[getattr(drive, attr, "Unknown")].append(
-                getattr(drive, "block_name", "Unknown")
+                getattr(drive, name_attr, "Unknown")
             )
         return grouped
 
     @staticmethod
-    def group_drive_by_firmware(drives: List["Drive"]) -> Dict[str, List[str]]:
+    def group_drive_by_firmware(drives: list["Drive"]) -> dict[str, list[str]]:
         """e.g. Return {"K001": ['sdb', 'sdc', ...], ...}"""
         grouped = defaultdict(list)
         firmware_list = AsyncUtils.run_async_jobs(
@@ -219,7 +235,7 @@ class StorageUtils:
         return grouped
 
     @staticmethod
-    def format_all_drives(drives: List["Drive"], secure_erase_option: int = 0) -> None:
+    def format_all_drives(drives: list["Drive"], secure_erase_option: int = 0) -> None:
         """Format All Drives.
         This method format the drives as a pre-requisite.
         Parameters
@@ -240,7 +256,7 @@ class StorageUtils:
         drive.format_drive(secure_erase_option=secure_erase_option)  # noqa
 
     @staticmethod
-    def get_all_drives_temperature(drives: List["Drive"]) -> Dict[str, int]:
+    def get_all_drives_temperature(drives: list["Drive"]) -> dict[str, int]:
         """All Drives Sensor Temperature values.
 
         This method collect the sensor temperature data of all drives.
@@ -266,7 +282,7 @@ class StorageUtils:
 
         Args:
             host: Host object. Used to run commands on DUT.
-            test_phase: String. When changing NVME io_timeout we usually do it on setup() or cleanup() phase of HAVOC test. To mention in which phase we are currently now in use this argument.
+            test_phase: String. When changing NVME io_timeout we usually do it on setup() or cleanup() phase of autoval test. To mention in which phase we are currently now in use this argument.
             new_timeout: Integer. The value to which we'll change the NVME io_timeout to.
 
         Returns:

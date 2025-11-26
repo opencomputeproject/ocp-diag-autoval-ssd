@@ -1,0 +1,9 @@
+{
+    "cycle_count": 10,
+    "cycle_type": "dc",
+    "remote_fio": false,
+    "drive_type": "ssd",
+    "test_generic_drives": true,
+    "t10_dix_format": true,
+    "qlc_ddi_test": true
+}

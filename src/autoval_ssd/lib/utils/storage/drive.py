@@ -59,6 +59,16 @@ class Drive:
         self.serial_number = "Unknown"
         self.type = self.get_type()
 
+    @property
+    def generic_name(self) -> str:
+        """
+        Get the generic name of the drive. To be overridden in sub-classes
+
+        Returns:
+            The block name of the drive by default.
+        """
+        return self.block_name
+
     def get_firmware_version(self) -> str:
         """Get drive fw version"""
         # To be overridden in child classes
@@ -229,9 +239,7 @@ class Drive:
         if match:
             temp = match.group(1)
         else:
-            match = re.search(
-                r"Current\sDrive\sTemperature.*\:\s*(\d+)\s*", out
-            )  # noqa
+            match = re.search(r"Current\sDrive\sTemperature.*\:\s*(\d+)\s*", out)  # noqa
             if match:
                 temp = match.group(1)
             else:

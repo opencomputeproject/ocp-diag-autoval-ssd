@@ -16,7 +16,7 @@ from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
-from autoval.lib.utils.file_actions import FileActions	
+from autoval.lib.utils.file_actions import FileActions
 from autoval.lib.utils.site_utils import SiteUtils
 from autoval_ssd.lib.utils.disk_utils import DiskUtils
 from autoval_ssd.lib.utils.fio_runner import FioRunner
@@ -153,10 +153,11 @@ class DriveDataIntegrityTest(StorageTestBase):
         self.check_supported_fio_version()
         if self.remote_fio:
             self._get_server_log_dir()
+            self.ip4 = self._is_hostname_ip4()
+            self.ipv6 = self.get_ipv6_addr()
         else:
             self._get_log_dir()
-        self.ip4 = self._is_hostname_ip4()
-        self.ipv6 = self.get_ipv6_addr()
+
         self.power_cmd = self._fio_trigger_cmd()
 
     def check_same_sled_hosts(self) -> int:
@@ -188,7 +189,7 @@ class DriveDataIntegrityTest(StorageTestBase):
         )
         if not FileActions.exists(self.fiolog_dir, self.host):
             FileActions.mkdirs(self.fiolog_dir, self.host)
-    
+
     def _get_server_log_dir(self) -> None:
         """
         This method sets up the directory for storing FIO log files on the control server.
@@ -572,8 +573,8 @@ class DriveDataIntegrityTest(StorageTestBase):
             )
             self._run_fio_remote(di_job, fio_output_file, power_trigger=power_trigger)
         else:
-            fio_output_file = (
-                f"{self.fiolog_dir}/fio-cycle_{cycle}_{name}.log".format(cycle, name)
+            fio_output_file = f"{self.fiolog_dir}/fio-cycle_{cycle}_{name}.log".format(
+                cycle, name
             )
             self._run_fio_local(di_job, fio_output_file, power_trigger=power_trigger)
 

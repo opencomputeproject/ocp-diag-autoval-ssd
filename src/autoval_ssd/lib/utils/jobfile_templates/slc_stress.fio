@@ -1,0 +1,14 @@
+[global]
+blocksize=BLOCKSIZE
+md_per_io_size=MDSIZE
+iodepth=IODEPTH
+ioengine=io_uring_cmd
+numjobs=NUMJOBS
+size=SIZE
+offset=OFFSET
+group_reporting=1
+cmd_type=nvme
+pi_act=1
+pi_chk=GUARD
+time_based
+runtime=RUNTIME

@@ -1,0 +1,20 @@
+{
+    "skip_iops_validation": true,
+    "skip_clean_filesystem": true,
+    "remove_partition": false,
+    "test_generic_drives": true,
+    "t10_dix_format": true,
+    "run_definition": {
+        "write": {
+            "template": "endurance_2_drive_fill_precondition.fio",
+            "args": {
+                "BLOCKSIZE": "256K",
+                "MDSIZE": "4k",
+                "IODEPTH":128,
+                "SIZE": "100%",
+                "NUMJOBS": "1",
+                "OFFSET": "0"
+            }
+        }
+    }
+}
