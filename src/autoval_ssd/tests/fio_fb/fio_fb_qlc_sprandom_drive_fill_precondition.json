@@ -1,0 +1,23 @@
+{
+    "skip_iops_validation": true,
+    "skip_clean_filesystem": true,
+    "remove_partition": false,
+    "test_generic_drives": true,
+    "t10_dix_format": true,
+    "clat_percentiles": ["99.000000", "99.990000", "99.999000", "99.999900"],
+    "run_definition": {
+        "write": {
+            "template": "qlc_sprandom_drive_fill_precondition.fio",
+            "args": {
+                "BLOCKSIZE": "512K",
+                "MDSIZE": "8k",
+                "IODEPTH":128,
+                "SIZE": "100%",
+                "NUMJOBS": "1",
+                "OFFSET": "0",
+                "SPR_REGIONS": 100,
+                "SPR_OP": "0.1"
+            }
+        }
+    }
+}
