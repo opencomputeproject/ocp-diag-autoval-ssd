@@ -21,6 +21,11 @@ from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval.lib.utils.file_actions import FileActions
 from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 
+OCP_2_6_WORKLOADS = [
+    "USSDT_Workload_loop_OCP2.6",
+    "HE_Flash_Short_wTRIM_1H22",
+]
+
 
 class FioSynthFlashUtils:
     """
@@ -117,16 +122,17 @@ class FioSynthFlashUtils:
                         result = FioSynthFlashUtils.remove_non_json_prefix(result)
                     result = json.loads(result)
                     for job in result.get("jobs", {}):
-                        if job["error"] != 0:
-                            if ignore_error:
-                                errors.append(file_path)
-                            else:
-                                raise TestError(
-                                    "Fio job has warnings or errors, "
-                                    "Check '%s' for more info" % file_path,
-                                    component=COMPONENT.STORAGE_DRIVE,
-                                    error_type=ErrorType.DRIVE_ERR,
-                                )
+                        if job["error"] == 0:
+                            continue
+                        if ignore_error:
+                            errors.append(file_path)
+                            continue
+                        raise TestError(
+                            f"Fio job has warnings or errors (Error code: {job['error']}), "
+                            f"Check '{file_path}' for more info",
+                            component=COMPONENT.STORAGE_DRIVE,
+                            error_type=ErrorType.DRIVE_ERR,
+                        )
                 except Exception as log_error:
                     raise TestError(
                         str(log_error),
@@ -700,3 +706,66 @@ class FioSynthFlashUtils:
             cap_tb = round(cap / pow(10, 12), 2)
             scaling_factor = max(cap_tb, 1.0)
         return scaling_factor
+
+    @staticmethod
+    def validate_ocp_drive_compatibility(test_drives: list[NVMeDrive]) -> None:
+        """
+        Ensure that the host does not have mix of OCP2.6 drives and non-OCP2.6 drives.
+        If it does, raise an error.
+        """
+        has_ocp_2_6_drives = False
+        has_non_ocp_2_6_drives = False
+        for drive in test_drives:
+            if hasattr(drive, "is_ocp_2_6_drive"):
+                if drive.is_ocp_2_6_drive():
+                    has_ocp_2_6_drives = True
+                else:
+                    has_non_ocp_2_6_drives = True
+                if has_ocp_2_6_drives and has_non_ocp_2_6_drives:
+                    raise TestError(
+                        "Both OCP2.6 and non-OCP2.6 drives are available on the host",
+                        component=COMPONENT.STORAGE_DRIVE,
+                        error_type=ErrorType.DRIVE_ERR,
+                    )
+
+    @staticmethod
+    def validate_workload_compatiblity(
+        test_drives: list[NVMeDrive], workloads: list[str]
+    ) -> None:
+        """
+        Check if the workload matches the drive in terms of OCP2.6 vs non-OCP2.6.
+        If it does, raise an error.
+        """
+        has_ocp_2_6_drives = any(
+            hasattr(drive, "is_ocp_2_6_drive") and drive.is_ocp_2_6_drive()
+            for drive in test_drives
+        )
+        for workload in workloads:
+            if workload in OCP_2_6_WORKLOADS:
+                if not has_ocp_2_6_drives:
+                    raise TestError(
+                        "Running OCP2.6 workload on non-OCP2.6 drives",
+                        component=COMPONENT.STORAGE_DRIVE,
+                        error_type=ErrorType.DRIVE_ERR,
+                    )
+            else:
+                if has_ocp_2_6_drives:
+                    raise TestError(
+                        "Running non-OCP2.6 workload on OCP2.6 drives",
+                        component=COMPONENT.STORAGE_DRIVE,
+                        error_type=ErrorType.DRIVE_ERR,
+                    )
+
+    @staticmethod
+    def validate_synth_verify_setting(synth_verify: bool, in_parallel: bool) -> None:
+        """
+        Validate synth_verify is used with parallel run.
+        """
+        if synth_verify and (not in_parallel):
+            msg = f"Current setting synth_verify={synth_verify},"
+            msg += f" parallel={in_parallel}"
+            raise TestError(
+                f"synth verify is only supported with fiosynth parallel run, {msg}",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.TOOL_ERR,
+            )
