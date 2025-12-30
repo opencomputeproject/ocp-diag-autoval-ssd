@@ -731,8 +731,8 @@
 		"twshared-pkg": {
 			"Read_IOPS_MIN": ">210000",
 			"Write_IOPS_MIN": ">600000",
-			"Read_BW_PER_TB_MIN": ">51000",
-			"Write_BW_PER_TB_MIN": ">62000",
+			"Read_BW_MIN": ">51000",
+			"Write_BW_MIN": ">62000",
 			"P99_Read_Latency_MAX": "<60000",
 			"P99.99_Read_Latency_MAX": "<90000",
 			"Max_Read_Latency_MAX": "<100000",
@@ -749,9 +749,9 @@
 		"rsw_cp_wTRIM": {
 			"Read_IOPS_MIN": ">119000",
 			"Write_IOPS_MIN": ">700000",
-			"Read_BW_PER_TB_MIN": ">27000",
-			"Write_BW_PER_TB_MIN": ">80000",
-			"Trim_BW_PER_TB_MIN": ">60000",
+			"Read_BW_MIN": ">27000",
+			"Write_BW_MIN": ">80000",
+			"Trim_BW_MIN": ">60000",
 			"P99_Read_Latency_MAX": "<15000",
 			"P99.99_Read_Latency_MAX": "<30000",
 			"Max_Read_Latency_MAX": "<80000",
@@ -768,9 +768,9 @@
 		"twi_iris": {
 			"Read_IOPS_MIN": ">420000",
 			"Write_IOPS_MIN": ">65000",
-			"Read_BW_PER_TB_MIN": ">45000",
-			"Write_BW_PER_TB_MIN": ">6000",
-			"Trim_BW_PER_TB_MIN": ">2400",
+			"Read_BW_MIN": ">45000",
+			"Write_BW_MIN": ">6000",
+			"Trim_BW_MIN": ">2400",
 			"P99_Read_Latency_MAX": "<10000",
 			"P99.99_Read_Latency_MAX": "<50000",
 			"Max_Read_Latency_MAX": "<150000",
@@ -785,9 +785,9 @@
 	},
 	"Idyno_Boot":{
 		"idyno_boot": {
-			"Read_BW_PER_TB_MIN": ">75000",
-			"Write_BW_PER_TB_MIN": ">15000",
-			"Trim_BW_PER_TB_MIN": ">100",
+			"Read_BW_MIN": ">75000",
+			"Write_BW_MIN": ">15000",
+			"Trim_BW_MIN": ">100",
 			"P99_Read_Latency_MAX": "<25000",
 			"P99.99_Read_Latency_MAX": "<50000",
 			"Max_Read_Latency_MAX": "<90000",
@@ -802,9 +802,9 @@
 	},
 	"Stacking":{
 		"stacking": {
-			"Read_BW_PER_TB_MIN": ">120000",
-			"Write_BW_PER_TB_MIN": ">64000",
-			"Trim_BW_PER_TB_MIN": ">18000",
+			"Read_BW_MIN": ">120000",
+			"Write_BW_MIN": ">64000",
+			"Trim_BW_MIN": ">18000",
 			"P99_Read_Latency_MAX": "<10000",
 			"P99.99_Read_Latency_MAX": "<50000",
 			"Max_Read_Latency_MAX": "<120000",
@@ -1290,6 +1290,135 @@
 			"Max_Write_Latency_Counter_BEFORE_MAX": "<1",
 			"Max_Read_Latency_Counter_AFTER_MAX": "<1",
 			"Max_Write_Latency_Counter_AFTER_MAX": "<1"
+		}
+	},
+	"NearGPU_2H26_4K": {
+		"NearGPU_Precondition_Seq_100": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Seq_50": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Seq_100": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Seq_50": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Write_4K": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_SeqWrite_256K": {
+			"Write_BW_MIN": ">9000000"
+		},
+		"NearGPU_SeqRead_256K": {
+			"Read_BW_MIN": ">14000000"
+		},
+		"NearGPU_RandWrite_4K": {
+			"Write_IOPS_MIN": ">400000"
+		},
+		"NearGPU_RandRead_4K": {
+			"Read_IOPS_MIN": ">3000000"
+		}
+	},
+	"NearGPU_2H26_512B": {
+		"NearGPU_Precondition_Rand_Seq_100": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Seq_50": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Write_4K": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_RandRead_512B": {
+			"Read_IOPS_MIN": ">3000000"
+		}
+	},
+	"NearGPU_8TB_2H27_4K": {
+		"NearGPU_Precondition_Seq_100": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Seq_50": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Seq_100": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Seq_50": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Write_4K": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_SeqWrite_256K": {
+			"Write_BW_MIN": ">11000000"
+		},
+		"NearGPU_SeqRead_256K": {
+			"Read_BW_MIN": ">20000000"
+		},
+		"NearGPU_RandWrite_4K": {
+			"Write_IOPS_MIN": ">500000"
+		},
+		"NearGPU_RandRead_4K": {
+			"Read_IOPS_MIN": ">5000000"
+		}
+	},
+	"NearGPU_8TB_2H27_512B": {
+		"NearGPU_Precondition_Rand_Seq_100": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Seq_50": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Write_4K": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_RandRead_512B": {
+			"Read_IOPS_MIN": ">5000000"
+		}
+	},
+	"NearGPU_16TB_2H27_4K": {
+		"NearGPU_Precondition_Seq_100": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Seq_50": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Seq_100": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Seq_50": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Write_4K": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_SeqWrite_256K": {
+			"Write_BW_MIN": ">20000000"
+		},
+		"NearGPU_SeqRead_256K": {
+			"Read_BW_MIN": ">20000000"
+		},
+		"NearGPU_RandWrite_4K": {
+			"Write_IOPS_MIN": ">500000"
+		},
+		"NearGPU_RandRead_4K": {
+			"Read_IOPS_MIN": ">6000000"
+		}
+	},
+	"NearGPU_16TB_2H27_512B": {
+		"NearGPU_Precondition_Rand_Seq_100": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Seq_50": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_Precondition_Rand_Write_4K": {
+			"Write_BW_MIN": ">0"
+		},
+		"NearGPU_RandRead_512B": {
+			"Read_IOPS_MIN": ">6000000"
 		}
 	}
 }

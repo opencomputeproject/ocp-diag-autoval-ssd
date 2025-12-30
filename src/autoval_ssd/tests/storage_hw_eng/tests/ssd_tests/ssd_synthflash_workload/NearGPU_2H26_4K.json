@@ -1,0 +1,26 @@
+{
+    "collect_smart_log": true,
+    "collect_drive_data": true,
+    "synth_verify": true,
+    "fiosynth_lm": false,
+
+    "DEBUG" : 1,
+    "timeout" : 36500,
+
+    "workload_configs"  :
+    [
+        {
+            "perform_resize": false,
+            "perform_raid": false,
+            "set_power_state": true,
+            "power_state": 0,
+
+            "devices" : ["ALL"],
+            "workload_suites"  : ["NearGPU_2H26_4K"]
+        }
+        ],
+    "wr_cache" : true,
+    "num_runs" : 1,
+    "flash_config_logging" : true,
+    "lba_format": "4096"
+}
