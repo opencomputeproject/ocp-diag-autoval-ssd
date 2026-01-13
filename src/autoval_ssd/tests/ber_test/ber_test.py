@@ -80,7 +80,7 @@ class BerTest(StorageTestBase):
         length = len(self.switchtec_devices)
         if length:
             self.log_info(
-                "Found %s switchtec devices: %s" % (length, self.switchtec_devices)
+                "Found {} switchtec devices: {}".format(length, self.switchtec_devices)
             )
             for device in self.switchtec_devices:
                 self.log_info("Running on device /dev/%s" % device)
@@ -242,6 +242,9 @@ class BerTest(StorageTestBase):
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.DRIVE_ERR,
             )
+            if isinstance(error_lines_end[2], dict):
+                error_lines_end[2] = error_lines_end[2].get("value")
+                error_lines_start[2] = error_lines_start[2].get("value")
             self.validate_greater_equal(
                 1,
                 error_lines_end[2] - error_lines_start[2],
@@ -279,4 +282,3 @@ class BerTest(StorageTestBase):
                 self.fio_runner.test_cleanup()
         finally:
             super().cleanup(*args, **kwargs)
-

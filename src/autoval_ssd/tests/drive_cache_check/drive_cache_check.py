@@ -6,9 +6,12 @@ Test validates the performance of the HDD/SSD
 during a fio operation by disabling and enabling the
 internal volatile write cache and then comparing the results.
 """
+
 from pprint import pformat
 
 from autoval_ssd.lib.utils.fio_runner import FioRunner
+from autoval_ssd.lib.utils.storage.drive import Drive
+from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
 
 
@@ -41,6 +44,16 @@ class DriveCacheCheck(StorageTestBase):
 
     def setup(self, *args, **kwargs) -> None:
         super().setup(*args, **kwargs)
+        # Filter out E1S drives (does not support volatile cache)
+        if not self.test_control.get("allow_e1s_cache_check", False):
+            e1s_drive_list = self.get_e1s_drive_list()
+            self.test_drives = [
+                drive for drive in self.test_drives if drive not in e1s_drive_list
+            ]
+            self.validate_non_empty_list(
+                self.test_drives,
+                "Assert list of test drives non-empty after filtering out E1S drives",
+            )
         # Get the drive which support the write cache.
         self.supported_drive_list = self.write_cache_supported_drive_list()
         self.validate_non_empty_list(
@@ -254,3 +267,47 @@ class DriveCacheCheck(StorageTestBase):
             self.power_cycle, self.save_state
         )
         return params
+
+    def get_e1s_drive_list(self) -> list[Drive]:
+        """
+        This function will get all the drives that are E1.S (i.e. log page version >= 2)
+        Return:
+            List of E1.S drives in self.test_drives
+        """
+        e1s_drive_list = []
+        for drive in self.test_drives:
+            log_page_version = None
+            try:
+                log_page_version = self.get_log_page_version(drive)
+            except ValueError:
+                pass
+            except KeyError:
+                pass
+            if isinstance(log_page_version, int):
+                if log_page_version >= 2:
+                    e1s_drive_list.append(drive)
+            else:
+                self.log_info(
+                    f"Log page version for {drive} not found assuming not E1.S"
+                )
+        return e1s_drive_list
+
+    def get_log_page_version(self, drive: Drive) -> int:
+        """
+        Retrieves the log page version of a given drive.
+
+        Args:
+            drive: The drive for which to retrieve the log page version.
+
+        Returns:
+            The log page version of the drive.
+        """
+        if not isinstance(drive, NVMeDrive):
+            raise ValueError("Drive is not an instance of NVMeDrive")
+
+        ocp_smart_log = drive.get_ocp_smart_log()
+        try:
+            return int(ocp_smart_log["Log page version"])
+        except KeyError as key_error:
+            self.log_info("Log page version not found")
+            raise key_error

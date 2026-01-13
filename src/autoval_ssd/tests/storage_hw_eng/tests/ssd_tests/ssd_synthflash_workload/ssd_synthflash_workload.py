@@ -3,8 +3,9 @@ import json
 import os
 import pathlib
 import re
+from collections.abc import Iterable
 from time import sleep
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from autoval.lib.host.component.component import COMPONENT
 
@@ -65,8 +66,9 @@ class SSDSynthFlashTest(SSDTestBase):
             *args, inputT=SSDSynthFlashInput, outputT=SSDSynthFlashOutput, **kwargs
         )
         self.synth_verify: bool = self.test_control.get("synth_verify", False)
-        self.storage_test_tools: List[str] = REQUIRED_PKGS
+        self.storage_test_tools: list[str] = REQUIRED_PKGS
         self.test_control["upqt_lm_validation"] = True
+        self.fiosynth_lm: bool = self.test_control.get("fiosynth_lm", True)
 
     def setup(self, *args: Any, **kwargs: Any) -> None:
         super().setup(init_bg_polling=False)
@@ -193,7 +195,7 @@ class SSDSynthFlashTest(SSDTestBase):
                     )
                 )
                 if self.lba_format:
-                    self.dix_lba_format_setup(lbaf_to_flbas_map)
+                    self.lba_format_setup(lbaf_to_flbas_map)
                     self.set_power_state(workload_config)
                     self.run_workloads(workload_config, index)
                     index += 1
@@ -208,6 +210,9 @@ class SSDSynthFlashTest(SSDTestBase):
 
             elif self.fdp_setup:
                 self.fdp_single_namespace_setup()
+
+            elif self.lba_format:
+                self.lba_format_setup()
 
             elif self.perform_resize:
                 self.over_provisioning_setup(workload_config)
@@ -252,7 +257,7 @@ class SSDSynthFlashTest(SSDTestBase):
             cycle=self.cycle,
         )
 
-    def over_provisioning_setup(self, workload_config: Dict[str, Any]) -> None:
+    def over_provisioning_setup(self, workload_config: dict[str, Any]) -> None:
         """
         Configures the drives for over-provisioning by setting the sweep
         parameters (key, unit, and value) from the workload configuration. Then
@@ -292,8 +297,8 @@ class SSDSynthFlashTest(SSDTestBase):
         )
 
     def dix_ns_resize_setup(
-        self, lbaf_to_flbas_map: Dict[str, int]
-    ) -> Iterable[List[Drive]]:
+        self, lbaf_to_flbas_map: dict[str, int]
+    ) -> Iterable[list[Drive]]:
         """
         Set up the DIX namespace resize process for the test drives.
 
@@ -357,25 +362,42 @@ class SSDSynthFlashTest(SSDTestBase):
             self.log_info(f"test drives {dix_test_drives}")
             yield dix_test_drives
 
-    def dix_lba_format_setup(self, lbaf_to_flbas_map: Dict[str, int]) -> None:
+    def lba_format_setup(
+        self, lbaf_to_flbas_map: Optional[dict[str, int]] = None
+    ) -> None:
         """
         This function formats the single NVMe namespace of the test drives using the specified
         LBA format.
 
         Args:
-            lbaf_to_flbas_map: A dictionary mapping LBA formats to FLBAS values.
+            lbaf_to_flbas_map: Optional dictionary mapping LBA formats to FLBAS values.
         """
 
         self.log_info(
             f"Formatting single NVMe namespace with {self.lba_format} LBA format"
         )
-        lbaf = lbaf_to_flbas_map[self.lba_format]
 
         for drive in self.test_specific_drives:
+            if lbaf_to_flbas_map is None:
+                drive_lbaf_map = NvmeResizeUtil.get_lbaf_to_flbas_map(
+                    self.host, drive.block_name
+                )
+            else:
+                drive_lbaf_map = lbaf_to_flbas_map
+
+            AutovalUtils.validate_condition(
+                self.lba_format in drive_lbaf_map,
+                f"{drive.block_name} supports LBA format '{self.lba_format}'.",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.INPUT_ERR,
+            )
+
+            lbaf = drive_lbaf_map[self.lba_format]
+
             AutovalUtils.validate_no_exception(
                 NVMeUtils.format_nvme,
                 [self.host, drive.block_name, 0, None, f" -l {lbaf}"],
-                f"{drive.block_name }: Format with lba {self.lba_format}",
+                f"{drive.block_name}: Format with lba {self.lba_format}",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.NVME_ERR,
             )
@@ -400,7 +422,7 @@ class SSDSynthFlashTest(SSDTestBase):
         self.performed_resize = True
 
     def set_power_state(
-        self, workload_config: Dict[str, Any], drives: Optional[List[Drive]] = None
+        self, workload_config: dict[str, Any], drives: Optional[list[Drive]] = None
     ) -> None:
         """
         Set the power state of all drives in a test.
@@ -413,8 +435,8 @@ class SSDSynthFlashTest(SSDTestBase):
         if drives is None:
             drives = self.test_specific_drives
         if workload_config.get("set_power_state", False):
-            power_state = workload_config.get("power_state", "")
-            if not power_state:
+            power_state = workload_config.get("power_state", None)
+            if power_state is None:
                 power_state = self.drive_capacity_power_state
 
             ComponentTestBase.power_state(
@@ -425,9 +447,9 @@ class SSDSynthFlashTest(SSDTestBase):
 
     def run_workloads(
         self,
-        workload_config: Dict[str, Any],
+        workload_config: dict[str, Any],
         index: int,
-        drives: Optional[List[Drive]] = None,
+        drives: Optional[list[Drive]] = None,
     ) -> None:
         """
         Perform the workload testing process for SSDSynthFlashTest.
@@ -590,7 +612,7 @@ class SSDSynthFlashTest(SSDTestBase):
         results_dir: str,
         synth_workload: str,
         test_drive: str,
-        lm_enabled_drives: Optional[List[str]] = None,
+        lm_enabled_drives: Optional[list[str]] = None,
     ) -> None:
         """Synth Output Validation.
 
@@ -725,7 +747,7 @@ class SSDSynthFlashTest(SSDTestBase):
             fiosynth_version = re.findall(
                 r"\d+(?:\.\d+)*", self.display_fiosynth_version()
             )[0]
-            cmd = f"{run_params.to_cmd()} {' --lm' if parse_version(fiosynth_version) >= parse_version('3.6.0') else ''}"
+            cmd = f"{run_params.to_cmd()} {' --lm' if self.fiosynth_lm and parse_version(fiosynth_version) >= parse_version('3.6.0') else ''}"
 
             self.log_info(f"Running {cmd} on host {host.hostname}")
 
@@ -802,8 +824,8 @@ class SSDSynthFlashTest(SSDTestBase):
         *,
         host: Host,
         devname: str,
-        entries: Dict[str, SSDSynthFlashDriveEntry],
-    ) -> Optional[Dict[str, SSDSynthFlashDriveEntry]]:
+        entries: dict[str, SSDSynthFlashDriveEntry],
+    ) -> Optional[dict[str, SSDSynthFlashDriveEntry]]:
         entry = entries[devname]
         # Get the drive object
         entry.drive = self.entry_get_drive(
@@ -833,8 +855,8 @@ class SSDSynthFlashTest(SSDTestBase):
         *,
         host: Host,
         devname: str,
-        entries: Optional[Dict[str, SSDSynthFlashDriveEntry]],
-    ) -> Optional[Dict[str, SSDSynthFlashDriveEntry]]:
+        entries: Optional[dict[str, SSDSynthFlashDriveEntry]],
+    ) -> Optional[dict[str, SSDSynthFlashDriveEntry]]:
         if entries is None:
             return
         entry = entries[devname]
@@ -864,7 +886,7 @@ class SSDSynthFlashTest(SSDTestBase):
         host: Host,
         folder_prefix: str,
         dest: str,
-        msgs: Optional[List[str]] = None,
+        msgs: Optional[list[str]] = None,
     ) -> Union[bool, str]:
         """
         Retrieve the synthflash results.
@@ -909,8 +931,8 @@ class SSDSynthFlashTest(SSDTestBase):
         return result_folder
 
     def _process_results(
-        self, host: Host, folder: str, msgs: Optional[List[str]] = None
-    ) -> Tuple[Dict[str, str], Dict[str, str], List[Dict[str, str]]]:
+        self, host: Host, folder: str, msgs: Optional[list[str]] = None
+    ) -> tuple[dict[str, str], dict[str, str], list[dict[str, str]]]:
         """
         Extract the data.
         """
