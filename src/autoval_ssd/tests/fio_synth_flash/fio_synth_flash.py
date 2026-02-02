@@ -9,7 +9,6 @@ from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
-
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval.lib.utils.file_actions import FileActions
 from autoval_ssd.lib.utils.fio.fio_synth_flash_utils import FioSynthFlashUtils
@@ -60,8 +59,12 @@ class FioSynthFlash(StorageTestBase):
         self.ignore_error = self.fio_synth_params.get("ignore_error", False)
         self.in_parallel = self.fio_synth_params.get("parallel", False)
         self.synth_verify = self.fio_synth_params.get("synth_verify", False)
-        self.skip_latency_monitor = self.test_control.get("skip_latency_monitor", True)
-        self.latency_monitor = None
+        self.skip_ocp_workload_check = self.test_control.get(
+            "skip_ocp_workload_check", False
+        )
+        self.lm_log_page_validation = self.test_control.get(
+            "lm_log_page_validation", False
+        )
 
     def get_test_params(self) -> str:
         params = "raid {} test_drive_filter {} synth_options {}".format(
@@ -169,11 +172,11 @@ class FioSynthFlash(StorageTestBase):
         @param data:
             The format of this data is list. In each item of the list,
             we expect to have a tuple of
-            (drive_object, filepath, and timestamp, command)
+            (drive_object, filepath, timestamp, command, errors)
 
             if it was not ran in parallel, then the tuple must be
-            (filepath, timestamp, command); thus, checking if it ran in
-            parallel so that it can repopulate the drive.
+            (filepath, timestamp, command, error); thus, checking if
+            it ran in parallel so that it can repopulate the drive.
         """
         temp_data = []
         AutovalLog.log_info("[FioSynthFlash Log] Collecting drive performance data")
@@ -206,14 +209,17 @@ class FioSynthFlash(StorageTestBase):
         """
         for drive, _csv_filepath, _current_time, _cmd, errors in self.test_results:
             if errors:
+                error_json_file = errors[0]
                 result = FileActions.read_data(
-                    errors[0], json_file=True, host=self.host
+                    error_json_file, json_file=True, host=self.host
                 )
                 for job in result.get("jobs", {}):
                     if job["error"] == 11:
                         AutovalUtils.validate_condition(
                             False,
-                            f"Fio job at {drive.block_name} has warnings or errors.\nError code: {job['error']}\n",
+                            f"Fio job at {drive.block_name} has warnings or errors.\n"
+                            f"Error code: {job['error']}\n"
+                            f"FIO output JSON file: {error_json_file}\n",
                             warning=True,
                             component=COMPONENT.STORAGE_DRIVE,
                             error_type=ErrorType.DRIVE_ERR,
@@ -221,8 +227,10 @@ class FioSynthFlash(StorageTestBase):
                     else:
                         combined_err = "\n".join(errors)
                         raise TestError(
-                            f"Fio job at {drive.block_name} has warnings or errors.\nError code: {job['error']}\n"
-                            f"Please check these json files:\n {combined_err}",
+                            f"Fio job at {drive.block_name} has warnings or errors.\n"
+                            f"Error code: {job['error']}\n"
+                            f"FIO output JSON file: {error_json_file}\n"
+                            f"Please check these json files:\n{combined_err}",
                             component=COMPONENT.STORAGE_DRIVE,
                             error_type=ErrorType.TOOL_ERR,
                         )
@@ -249,9 +257,13 @@ class FioSynthFlash(StorageTestBase):
                 into the result_handler.
         """
         FioSynthFlashUtils.validate_ocp_drive_compatibility(self.test_drives)
-        FioSynthFlashUtils.validate_workload_compatiblity(
-            self.test_drives, self.workload
-        )
+        if not self.skip_ocp_workload_check:
+            FioSynthFlashUtils.validate_workload_compatiblity(
+                self.test_drives, self.workload
+            )
+        else:
+            AutovalLog.log_info("Skipping workload compatibility check ")
+
         FioSynthFlashUtils.validate_synth_verify_setting(
             self.synth_verify, self.in_parallel
         )
@@ -261,17 +273,44 @@ class FioSynthFlash(StorageTestBase):
 
         self.backup_workload_json()
 
-        if not self.skip_latency_monitor:
-            self.latency_monitor = LatencyMonitor(
-                host=self.host,
-                test_drives=self.test_drives,
-                test_control=self.test_control,
-            )
+        self.latency_monitor = LatencyMonitor(
+            host=self.host, test_drives=self.test_drives, test_control=self.test_control
+        )
+
+        if self.lm_log_page_validation:
+            self.filter_lm_unsupported_drives()
 
         self.run_workload("precondition")
         self.run_workload("stress")
 
-    def run_workload(self, workload: str) -> None:
+    def filter_lm_unsupported_drives(self) -> None:
+        """
+        Filter out drives that do not support LM log page 0xC3 with version >= 1.
+        """
+        lm_supported_drives = []
+        unsupported_drives = []
+
+        for drive in self.test_drives:
+            if self.latency_monitor.validate_lm_log_page_version(drive):
+                lm_supported_drives.append(drive)
+            else:
+                unsupported_drives.append(str(drive))
+
+        if unsupported_drives:
+            AutovalLog.log_info(
+                f"The following drives do not support LM log page (version < 1): "
+                f"{unsupported_drives}"
+            )
+
+        self.latency_monitor.test_drives = lm_supported_drives
+
+        if not lm_supported_drives:
+            AutovalLog.log_info(
+                "No drives support LM log page. "
+                "Skipping latency monitor validation for this test."
+            )
+
+    def run_workload(self, workload: str):
         """
         Run workload precondition or stress
 
@@ -288,15 +327,16 @@ class FioSynthFlash(StorageTestBase):
                 AutovalLog.log_info(f"Starting {workload_type} precondition test ...")
                 # prepare workload precondition.
                 (
-                    _workload_name,
+                    workload_name,
                     result_dir,
                 ) = self.prepare_workload_precondition(workload_type)
+
             else:
                 AutovalLog.log_info(
                     f"Starting {workload_type} work load stress test ..."
                 )
                 (
-                    _workload_name,
+                    workload_name,
                     result_dir,
                 ) = self.prepare_workload_stress(workload_type)
 
@@ -305,7 +345,7 @@ class FioSynthFlash(StorageTestBase):
         self.result_handler.add_test_results(self.formatted_test_result)
         self.check_errors()
 
-    def run_fio_synth_flash(self, workload_type: str, result_dir: str) -> None:
+    def run_fio_synth_flash(self, workload_type: str, result_dir: str):
         """
         Run fio_synth_flash command and collect the result.
 
@@ -313,11 +353,9 @@ class FioSynthFlash(StorageTestBase):
             workload_type: workload type from workload list
             result_dir: result directory
         """
-        lm_enabled_drives: list[str] = []
-        if self.latency_monitor:
-            lm_enabled_drives = self.latency_monitor.enable(
-                workload=workload_type, working_directory=self.synth_result_dir
-            )
+        lm_enabled_drives = self.latency_monitor.enable(
+            workload=workload_type, working_directory=self.synth_result_dir
+        )
         test_result = FioSynthFlashUtils.start_fio_synth_flash(
             host=self.host,
             workload=workload_type,
@@ -340,7 +378,7 @@ class FioSynthFlash(StorageTestBase):
                 lm_enabled_drives,
             )
 
-        if lm_enabled_drives and self.latency_monitor:
+        if lm_enabled_drives:
             self.latency_monitor.collect_logs(
                 workload=workload_type,
                 synth_workload_result_dir=result_dir,

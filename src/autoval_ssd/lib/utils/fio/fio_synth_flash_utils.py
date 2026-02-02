@@ -11,7 +11,6 @@ from glob import glob
 from typing import Optional
 
 from autoval.lib.host.component.component import COMPONENT
-
 from autoval.lib.host.host import Host
 from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_exceptions import TestError

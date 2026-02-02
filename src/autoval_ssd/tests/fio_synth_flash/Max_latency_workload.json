@@ -1,0 +1,13 @@
+{
+  "test_drive_filter": true,
+  "drive_type": "ssd",
+  "max_latency_lm_validation": true,
+  "skip_ocp_workload_check": true,
+  "lm_log_page_validation": true,
+  "workload": ["Nvme_Cli_Wkld"],
+  "fio_synth_params":{
+    "synth_verify": false,
+    "ignore_error": true,
+    "parallel": true
+  }
+}
