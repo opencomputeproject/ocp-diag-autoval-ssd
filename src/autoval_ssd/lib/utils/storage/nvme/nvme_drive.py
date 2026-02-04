@@ -1465,8 +1465,6 @@ class NVMeDrive(Drive):
             sid_auth_blocked_state = (byte_0xA8_int >> 1) & 1
             if sid_state and not sid_auth_blocked_state:
                 return OwnershipStatus.SET
-            if sid_auth_blocked_state and sid_state:
-                return OwnershipStatus.BLOCKED_AND_SET
             if sid_auth_blocked_state and not sid_state:
                 return OwnershipStatus.BLOCKED_AND_NOT_SET
             if not sid_state and not sid_auth_blocked_state:
