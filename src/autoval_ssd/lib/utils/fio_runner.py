@@ -10,7 +10,7 @@ import os
 import random
 import re
 import time
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Union
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.host.host import Host
@@ -24,7 +24,6 @@ from autoval.lib.utils.decorators import ignored
 from autoval.lib.utils.file_actions import FileActions
 from autoval.lib.utils.site_utils import SiteUtils
 from autoval.lib.utils.uperf_test_util import ThresholdConfig
-
 from autoval_ssd.lib.utils.disk_utils import DiskUtils
 from autoval_ssd.lib.utils.filesystem_utils import FilesystemUtils
 from autoval_ssd.lib.utils.storage.drive import Drive
@@ -177,6 +176,7 @@ class FioRunner(TestUtilsBase):
         self.t10_dix_format = args.get("t10_dix_format", False)
         self.qlc_perf_test = args.get("qlc_perf_test", False)
         self.slc_stress_test = args.get("slc_stress_test", False)
+        self.add_qlc_trim = args.get("add_qlc_trim", False)
 
     def test_setup(self) -> None:
         SystemUtils.install_rpms(
@@ -514,6 +514,9 @@ class FioRunner(TestUtilsBase):
             dev_str = self._add_boot_drive_fio_options(
                 dev_str, drives, precondition, _size, idx, files
             )
+
+            if self.add_qlc_trim:
+                dev_str = self._add_qlc_trim_job(dev_str, drives, idx, replace)
 
         if not job_name:
             job_name = templ_filename
@@ -924,7 +927,7 @@ class FioRunner(TestUtilsBase):
 
     def run_interupted_fio(
         self, job: str, power_cycle: str, remote: bool = False
-    ) -> tuple[bool, str]:
+    ) -> Tuple[bool, str]:
         """Runs FIO with a dirty power off during the process.
         This function runs FIO with a dirty power off during the process and forms
         the power command with a random time value for trigger.
@@ -1832,14 +1835,14 @@ class FioRunner(TestUtilsBase):
                     diff = max(value) - min(value)
                     if self.skip_iops:
                         AutovalLog.log_info(
-                            f"{key}: {_type} compare by {_by_model_or_cycle} - {_read_or_write} iops is {value}"
+                            f"{key}: {_type} compare by {_by_model_or_cycle} - {_read_or_write} iops is {sorted(value)}"
                         )
                     else:
                         iops_diff_percent = int(FioRunner.IOPS_DIFF * 100)
                         AutovalUtils.validate_less_equal(
                             float(diff),
                             max(value) * FioRunner.IOPS_DIFF,
-                            f"{key}: {_type} compare by {_by_model_or_cycle} - {_read_or_write} iops are {value}"
+                            f"{key}: {_type} compare by {_by_model_or_cycle} - {_read_or_write} iops are {sorted(value)}"
                             f": MAX-MIN delta is less than or equal to {iops_diff_percent}% of MAX",
                             raise_on_fail=False,
                             component=COMPONENT.STORAGE_DRIVE,
@@ -2104,8 +2107,7 @@ class FioRunner(TestUtilsBase):
                     FioRunner.metric_result.update({metric: _data})
             else:
                 raise TestError(
-                    f"No values found to validate {metric} "
-                    "with the expected threshold",
+                    f"No values found to validate {metric} with the expected threshold",
                     component=COMPONENT.STORAGE_DRIVE,
                     error_type=ErrorType.DRIVE_ERR,
                 )
@@ -2193,7 +2195,7 @@ class FioRunner(TestUtilsBase):
 
         # Create new partitions
         self.host.run(
-            f'echo -e "size={int(new_partition_size/sector_size)}" | sfdisk /dev/{self.boot_drive} --append --force'
+            f'echo -e "size={int(new_partition_size / sector_size)}" | sfdisk /dev/{self.boot_drive} --append --force'
         )
         self.host.run(
             f'echo -e "start=" | sfdisk /dev/{self.boot_drive} --append --force'
@@ -2327,7 +2329,7 @@ class FioRunner(TestUtilsBase):
             AutovalUtils.validate_no_exception(
                 NVMeUtils.format_nvme,
                 [self.host, drive.block_name, 0, None, f" -l {lbaf}"],
-                f"{drive.block_name }: Format with lba {t10_dix_format}",
+                f"{drive.block_name}: Format with lba {t10_dix_format}",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.NVME_ERR,
             )
@@ -2358,19 +2360,74 @@ class FioRunner(TestUtilsBase):
         else:
             write_block_str = parts[0]
 
-        write_block_str = write_block_str.upper()
-        unit = write_block_str[-1]
+        return self._calculate_md_size_for_blocksize(write_block_str)
+
+    def _add_qlc_trim_job(
+        self,
+        dev_str: str,
+        drives: list[Union[str, Drive]],
+        idx: int,
+        replace: Optional[dict[str, Any]] = None,
+    ) -> str:
+        """
+        Add a randtrim job section to run alongside existing qlc workload for each drive.
+
+        Args:
+            dev_str: Base string containing the fio job definitions.
+            drives: List of drive names or Drive objects.
+            idx: Starting index for job numbering.
+            replace: Dictionary containing the current FIO args combination,
+                including TRIM_BLOCKSIZE from run_definition.args.
+
+        Returns:
+            The updated job string with trim job sections added for each drive.
+        """
+        replace = replace or {}
+        trim_blocksize = str(replace.get("TRIM_BLOCKSIZE", "1M"))
+        trim_md_size = self._calculate_md_size_for_blocksize(trim_blocksize)
+
+        for device in drives:
+            device_name = self._get_device_name_for_test(device)
+
+            trim_section = (
+                f"\n[trim_job{idx}]\n"
+                "rw=randtrim\n"
+                f"filename=/dev/{device_name}\n"
+                f"blocksize={trim_blocksize}\n"
+                f"md_per_io_size={trim_md_size}\n"
+                "new_group=0\n"
+            )
+            dev_str += trim_section
+            idx += 1
+
+        return dev_str
+
+    def _calculate_md_size_for_blocksize(self, blocksize_str: str) -> str:
+        """
+        Calculate the md_per_io_size based on the given blocksize.
+
+        Args:
+            blocksize_str: Block size string (e.g., '1M', '128K', '64M')
+
+        Returns:
+            md_per_io_size as string (e.g., '16k', '2k')
+        """
+        blocksize_str = blocksize_str.upper().strip()
+        if not blocksize_str:
+            return "1k"
+
+        unit = blocksize_str[-1]
         try:
-            value = int(write_block_str.rstrip("KM"))
+            value = int(blocksize_str.rstrip("KMB"))
         except ValueError:
             return "1k"
 
         if unit == "M":
-            write_block_kb = value * 1024
+            blocksize_kb = value * 1024
         elif unit == "K":
-            write_block_kb = value
+            blocksize_kb = value
         else:
-            write_block_kb = value
+            blocksize_kb = value
 
-        md_size_kb = max(write_block_kb // 64, 1)
+        md_size_kb = max(blocksize_kb // 64, 1)
         return f"{md_size_kb}k"

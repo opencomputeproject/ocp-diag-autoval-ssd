@@ -7,17 +7,19 @@
     "qlc_perf_test": true,
     "workload_type": "qlc_performance",
     "clat_percentiles": ["99.000000", "99.990000", "99.999000", "99.999900"],
+    "add_qlc_trim": true,
     "run_definition": {
         "randrw": {
             "template": "qlc_performance.fio",
             "args": {
                 "BLOCKSIZE": ["32K,512k","128K,512k","32K,128k","128K,128k"],
-                "IODEPTH":128,
+                "IODEPTH":[4, 8, 16, 32, 64, 128, 256, 512],
                 "SIZE": "100%",
                 "NUMJOBS": "1",
                 "OFFSET": "0",
-                "RUNTIME": "20m",
-                "RWMIXREAD": "80"
+                "RUNTIME": "10m",
+                "RWMIXREAD": "80",
+                "TRIM_BLOCKSIZE": ["256K", "1M", "32M", "256M"]
             }
         }
     }

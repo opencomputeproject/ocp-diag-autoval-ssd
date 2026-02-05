@@ -9,14 +9,12 @@
 # pyre-unsafe
 from pprint import pformat
 from threading import Event
-from typing import Dict, Tuple
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval_ssd.lib.utils.drive_monitor_utils import DriveMonitorUtils
-
 from autoval_ssd.lib.utils.filesystem_utils import FilesystemUtils
 from autoval_ssd.lib.utils.fio_runner import FioRunner
 from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
@@ -29,13 +27,16 @@ class FioFb(StorageTestBase):
     and running the fio jobs.
     """
 
-    def __init__(self, *args: Tuple[object, ...], **kwargs: Dict[str, object]) -> None:
+    def __init__(self, *args: tuple[object, ...], **kwargs: dict[str, object]) -> None:
         super().__init__(*args, **kwargs)
 
         self.enable_periodic_drive_monitor = self.test_control.get(
             "enable_periodic_drive_monitor", False
         )
         self.end_of_test = None
+        self.skip_clean_filesystem = self.test_control.get(
+            "skip_clean_filesystem", False
+        )
 
     def setup(self, *args, **kwargs) -> None:
         super().setup(*args, **kwargs)
@@ -108,19 +109,20 @@ class FioFb(StorageTestBase):
             self.end_of_test.set()
             AutovalThread.wait_for_autoval_thread([self.monitor_thread])
         # Cleanup all drives except boot drive
-        drives = [d for d in self.test_drives if str(d) != str(self.boot_drive)]
-        for device in drives:
-            mnt = "/mnt/fio_test_%s" % device.block_name
-            AutovalUtils.validate_no_exception(
-                FilesystemUtils.clean_filesystem,
-                [self.host, device.block_name, mnt],
-                "Clean drive %s" % device,
-                raise_on_fail=False,
-                log_on_pass=False,
-                component=COMPONENT.SYSTEM,
-                error_type=ErrorType.DRIVE_ERR,
-            )
-        super(FioFb, self).cleanup()
+        if not self.skip_clean_filesystem:
+            drives = [d for d in self.test_drives if str(d) != str(self.boot_drive)]
+            for device in drives:
+                mnt = f"/mnt/fio_test_{device.block_name}"
+                AutovalUtils.validate_no_exception(
+                    FilesystemUtils.clean_filesystem,
+                    [self.host, device.block_name, mnt],
+                    "Clean drive %s" % device,
+                    raise_on_fail=False,
+                    log_on_pass=False,
+                    component=COMPONENT.SYSTEM,
+                    error_type=ErrorType.DRIVE_ERR,
+                )
+        super().cleanup()
 
     def get_test_params(self) -> str:
         params = ""
@@ -130,7 +132,6 @@ class FioFb(StorageTestBase):
             args = pformat(job_def.get("args"))
             template = job_def.get("template")
             params += (
-                f"Fio job: {job}. Fio template: {template} \n"
-                f"Template arguments: {args}"
+                f"Fio job: {job}. Fio template: {template} \nTemplate arguments: {args}"
             )
         return params
