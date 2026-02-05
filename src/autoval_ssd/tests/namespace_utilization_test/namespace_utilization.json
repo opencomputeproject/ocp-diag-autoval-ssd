@@ -10,10 +10,22 @@
                 "BLKSIZE": "256k",
                 "SIZE": "10GB",
                 "DEPTH": 32,
-                "RUNTIME": "3",
+                "RUNTIME": "3600",
                 "VERIFY": "md5",
                 "DO_VERIFY": 0,
                 "RW": "write"
+            }
+        }
+    },
+    "read_verify_run_definition": {
+        "verify": {
+            "template": "basic_verify.fio",
+            "args": {
+                "BLKSIZE": "256k",
+                "SIZE": "10GB",
+                "DEPTH": 32,
+                "VERIFY": "md5",
+                "RW": "read"
             }
         }
     }

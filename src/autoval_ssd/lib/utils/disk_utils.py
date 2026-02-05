@@ -2,22 +2,24 @@
 
 # pyre-unsafe
 """Library to manage disks"""
+
 import math
+import os
 import re
 import time
-from typing import Dict, List, Optional
 
 from autoval.lib.host.component.component import COMPONENT
-
 from autoval.lib.host.host import Host
 from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_exceptions import TestError, TestInputError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
-
 from autoval_ssd.lib.utils.filesystem_utils import FilesystemUtils
 from autoval_ssd.lib.utils.sg_utils import SgUtils
+
+# ext4 filesystem max file size with 4KB block size: 16 TiB
+EXT4_MAX_FILE_SIZE_BYTES = 16 * (1000**4)  # 16 TiB in bytes
 
 
 class DiskUtils:
@@ -28,7 +30,7 @@ class DiskUtils:
     @staticmethod
     def get_storage_devices(
         host, drive_type=None, power_on_all_slots: bool = False
-    ) -> List[str]:
+    ) -> list[str]:
         """
         This function finds all storage devices (i.e. SSDs and HDDs) excluding
         the boot drive and any other drives that are not considered as storage devices.
@@ -70,7 +72,7 @@ class DiskUtils:
     @staticmethod
     def _get_storage_devices(
         host, ssd_only: int = 0, hdd_only: int = 0, power_on_all_slots: bool = False
-    ) -> Dict[str, Dict[str, str]]:
+    ) -> dict[str, dict[str, str]]:
         """
         This function returns the list of drives from the Enclosure/RAID and
         Direct Attached drives excluding boot drives.
@@ -119,7 +121,7 @@ class DiskUtils:
     @staticmethod
     def _get_storage_expander_devices(
         host, device_type, power_on_all_slots: bool, extra_flag
-    ) -> Dict[str, Dict[str, str]]:
+    ) -> dict[str, dict[str, str]]:
         """
         This function returns all storage drives from the specified enclosure
         and returns a list of dictionaries containing the device type and name of each drive.
@@ -242,7 +244,9 @@ class DiskUtils:
         return devices
 
     @staticmethod
-    def get_block_devices(host, exclude_boot_drive: bool = True, boot_drive_physical_location: str = ""):
+    def get_block_devices(
+        host, exclude_boot_drive: bool = True, boot_drive_physical_location: str = ""
+    ):
         """
         Return a list of block devices on the system
         @return String[]: e.g. [sda, sdb, sdc ...]
@@ -260,7 +264,8 @@ class DiskUtils:
             )
             if boot_drive_physical_location:
                 boot_drive: str = DiskUtils.get_block_from_physical_location(
-                    host,[boot_drive_physical_location],
+                    host,
+                    [boot_drive_physical_location],
                     DiskUtils.get_block_devices_info(host),
                 )
                 if not boot_drive:
@@ -275,7 +280,7 @@ class DiskUtils:
         return drives
 
     @staticmethod
-    def get_block_devices_info(host) -> List:
+    def get_block_devices_info(host) -> list:
         """
         Return a list of block devices on the system
         @return String[]: e.g. [nvme0n1:{}, nvme0n2:{} ...]
@@ -302,7 +307,7 @@ class DiskUtils:
 
     @staticmethod
     def get_block_from_physical_location(
-        host: "Host", location: List, devices: List
+        host: "Host", location: list, devices: list
     ) -> str:
         """
         Get the logical block from drive physical location
@@ -322,7 +327,7 @@ class DiskUtils:
         return block_dev
 
     @staticmethod
-    def has_mountpoint(lsblk_entry: Dict) -> bool:
+    def has_mountpoint(lsblk_entry: dict) -> bool:
         if "mountpoint" in lsblk_entry and lsblk_entry["mountpoint"] is not None:
             return True
         if "mountpoints" in lsblk_entry:
@@ -405,8 +410,8 @@ class DiskUtils:
 
     @staticmethod
     def get_partitions_and_mount_points_in_drive(
-        host, lsblk: Optional[str] = None
-    ) -> Dict:
+        host, lsblk: str | None = None
+    ) -> dict:
         """
         This method will filter the output of command "lsblk" with only the drives with partition.
         @param Host host : Host Object
@@ -438,7 +443,7 @@ class DiskUtils:
     def create_partition(
         host,
         device,
-        mount_point: str = "/mnt/havoc_mnt",
+        mount_point: str = "/mnt/autoval_mnt",
         part_num=None,
         start_pct=None,
         end_pct=None,
@@ -469,7 +474,7 @@ class DiskUtils:
             FilesystemUtils.unmount(host, mount_point)
         time.sleep(1)
         if script:
-            cmd = "parted -s /dev/%s %s" % (device, script_args)
+            cmd = f"parted -s /dev/{device} {script_args}"
         else:
             cmd = "parted -a optimal /dev/%s" % device
             if gpt:
@@ -499,7 +504,7 @@ class DiskUtils:
     @staticmethod
     def get_drive_partitions(
         host: "Host", block_name: str, refresh_partitions: bool = True
-    ) -> List[str]:
+    ) -> list[str]:
         """Return list of drive partitions"""
         if refresh_partitions:
             host.run("partprobe", timeout=900)
@@ -519,7 +524,7 @@ class DiskUtils:
         return partitions
 
     @staticmethod
-    def get_drive_partitions_mountpoint(host: "Host", block_name: str) -> List[str]:
+    def get_drive_partitions_mountpoint(host: "Host", block_name: str) -> list[str]:
         """
         Example from lslbk output:
             nvme1n1      259:0    0 238.5G  0 disk
@@ -550,7 +555,7 @@ class DiskUtils:
             if "not mounted" in str(exc) or "no mount" in str(exc):
                 AutovalLog.log_info("Partition %s is not mounted" % part)
             else:
-                raise TestError("Fail to umount partition %s: %s" % (part, exc))
+                raise TestError(f"Fail to umount partition {part}: {exc}")
 
     @staticmethod
     def remove_all_partitions(
@@ -576,7 +581,7 @@ class DiskUtils:
         # unmounts if mounted else just ignore
         DiskUtils.umount_partition(host, partition)
         # remove the partition
-        cmd = "yes | parted -a optimal /dev/%s rm %s" % (block_name, part_num)
+        cmd = f"yes | parted -a optimal /dev/{block_name} rm {part_num}"
         try:
             host.run(cmd=cmd)  # noqa
             AutovalLog.log_info("Partition %s is removed" % partition)
@@ -655,7 +660,7 @@ class DiskUtils:
         elif _unit in ("mb", "m"):
             size = (byte_count) / math.pow(10, 6)
         else:
-            raise TestError("{} unit is not supported".format(_unit))
+            raise TestError(f"{_unit} unit is not supported")
         return size
 
     @staticmethod
@@ -699,7 +704,7 @@ class DiskUtils:
         host = host_dict
         if isinstance(host_dict, dict):
             host = Host(host_dict)
-        cmd = "%ssum %s" % (key, path)
+        cmd = f"{key}sum {path}"
         out = host.run(cmd=cmd, timeout=36000)
         match = re.match(r"(^\S+)\s*", out)
         if match:
@@ -715,7 +720,7 @@ class DiskUtils:
         action,
         size: int = 1,
         fs: str = "tmpfs",
-        path: str = "/mnt/havoc_test_ramdisk",
+        path: str = "/mnt/autoval_test_ramdisk",
     ) -> str:
         """
         path: absolute path of ramdisk
@@ -724,14 +729,12 @@ class DiskUtils:
         action: "create" or "delete"
         """
         if "create" == action:
-            host.run(
-                "umount %s; rm -rf %s" % (path, path), ignore_status=True, sudo=True
-            )
+            host.run(f"umount {path}; rm -rf {path}", ignore_status=True, sudo=True)
             host.run("mkdir -p %s" % path)
-            cmd = "mount -t %s -o mode=1777,size=%s %s %s" % (fs, size, fs, path)
+            cmd = f"mount -t {fs} -o mode=1777,size={size} {fs} {path}"
             host.run(cmd, sudo=True)
         elif "delete" == action:
-            cmd = "rm -rf %s/*; umount %s; rm -rf %s/" % (path, path, path)
+            cmd = f"rm -rf {path}/*; umount {path}; rm -rf {path}/"
             host.run(cmd, ignore_status=True)
         else:
             raise TestError("Action %s not supported" % action)
@@ -799,13 +802,35 @@ class DiskUtils:
         if size_in_unit == "b":
             cmd = "du -shb %s" % dir_path
         else:
-            cmd = "du -sh --block-size=%s %s" % (size_in_unit, dir_path)
+            cmd = f"du -sh --block-size={size_in_unit} {dir_path}"
         output = host.run(cmd)
         pattern = re.compile(r"(\d+)")
         match = re.search(pattern, output)
         if match:
             return int(match.group(1))
         raise TestError("No match for directory size found, check if directory exists")
+
+    @staticmethod
+    def _get_filesystem_info_from_path(host, path: str) -> dict:
+        """
+        Get filesystem type and block size for the given path.
+
+        Args:
+            host: The host object
+            path: The file path (e.g., /mnt/fio_test_nvme19n1/file1)
+
+        Returns:
+            Dictionary containing 'fs_type' and 'block_size' keys
+        """
+        mount_dir = os.path.dirname(path)
+
+        cmd_fs_type = f"df -T {mount_dir} | tail -1 | awk '{{print $2}}'"
+        fs_type = host.run(cmd=cmd_fs_type).strip()
+
+        cmd_block_size = f"stat -f --format=%S {mount_dir}"
+        block_size = int(host.run(cmd=cmd_block_size).strip())
+
+        return {"fs_type": fs_type, "block_size": block_size}
 
     @staticmethod
     def create_file(
@@ -821,8 +846,30 @@ class DiskUtils:
         # For size in human format
         if not isinstance(size, int):
             size = DiskUtils.get_bytes(size)
+
+        # Check filesystem limitations for ext4 with 4KB block size
+        try:
+            fs_info = DiskUtils._get_filesystem_info_from_path(host, path)
+            fs_type = fs_info.get("fs_type", "").lower()
+            block_size = fs_info.get("block_size", 4096)
+
+            if fs_type == "ext4" and block_size == 4096:
+                if size > EXT4_MAX_FILE_SIZE_BYTES:
+                    original_size = size
+                    size = EXT4_MAX_FILE_SIZE_BYTES
+                    AutovalLog.log_info(
+                        f"Adjusting file size from {original_size} bytes to "
+                        f"{size} bytes (16 TiB) due to ext4 filesystem "
+                        f"max file size limitation with 4KB block size"
+                    )
+        except Exception as e:
+            AutovalLog.log_info(
+                f"Unable to determine filesystem info for {path}: {e}. "
+                f"Proceeding with original size."
+            )
+
         if tool == "fallocate":
-            cmd = "fallocate -l %s %s" % (size, path)
+            cmd = f"fallocate -l {size} {path}"
         elif tool == "dd":
             blocks = int(size / DiskUtils.get_bytes(bs))
             cmd = "dd if=/dev/urandom of=%s bs=%s count=%d" % (path, bs, blocks)
@@ -835,7 +882,7 @@ class DiskUtils:
 
     @staticmethod
     def calculate_min_size_of_drives(
-        host: "Host", percent_write_size: int, drive_list: List[str]
+        host: "Host", percent_write_size: int, drive_list: list[str]
     ) -> str:
         """
         This function calculates the minimum size to be written on the drive.
@@ -874,10 +921,10 @@ class DiskUtils:
     @staticmethod
     def get_md5_for_drivelist(
         host: "Host",
-        drive_path_map: Dict[str, str],
+        drive_path_map: dict[str, str],
         parallel: bool = True,
         key: str = "md5",
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """
         This function will get the md5 values for all the devices sent.This will work
         for both filesystem and for raw disk.
@@ -958,7 +1005,7 @@ class DiskUtils:
         # Delete Partition table
         if bs is None:
             bs = SgUtils.get_hdd_lb_length(host, device)
-        cmd = "dd if=/dev/zero of=/dev/%s bs=%s count=1 seek=0" % (device, bs)
+        cmd = f"dd if=/dev/zero of=/dev/{device} bs={bs} count=1 seek=0"
         host.run(cmd)
 
     @staticmethod
@@ -1051,12 +1098,12 @@ class DiskUtils:
             DiskUtils.umount(host, mount_point)
 
     @staticmethod
-    def get_mount_points(host, block_name) -> List:
+    def get_mount_points(host, block_name) -> list:
         """
         Method to get list of mount points available on the drive.
         Example:
             1. /mnt/fio_test_nvme0n1/file_1
-            2. /mnt/havoc_mnt
+            2. /mnt/autoval_mnt
         """
         cmd = f"lsblk -i /dev/{block_name}"
         out = host.run(cmd)  # noqa
