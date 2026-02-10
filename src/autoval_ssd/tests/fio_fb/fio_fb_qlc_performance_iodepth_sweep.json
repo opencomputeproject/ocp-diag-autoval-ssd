@@ -12,11 +12,11 @@
             "template": "qlc_performance.fio",
             "args": {
                 "BLOCKSIZE": ["32K,512k","128K,512k","32K,128k","128K,128k"],
-                "IODEPTH":128,
+                "IODEPTH":[4, 8, 16, 32, 64, 128, 256, 512],
                 "SIZE": "100%",
                 "NUMJOBS": "1",
                 "OFFSET": "0",
-                "RUNTIME": "20m",
+                "RUNTIME": "10m",
                 "RWMIXREAD": "80"
             }
         }

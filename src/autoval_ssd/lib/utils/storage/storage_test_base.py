@@ -7,12 +7,11 @@ import datetime
 import os
 import re
 import time
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import autoval_ssd.lib.utils.storage.smart_validator as smart_validator
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.test_base import TestBase
-
 from autoval.lib.utils.async_utils import AsyncJob, AsyncUtils
 from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_log import AutovalLog
@@ -190,7 +189,7 @@ class StorageTestBase(TestBase):
             boot_device: str = DiskUtils.get_boot_drive(self.host)
         return boot_device
 
-    def allocate_test_drives(self, drives: Optional[List[Drive]] = None) -> List[Drive]:
+    def allocate_test_drives(self, drives: Optional[list[Drive]] = None) -> list[Drive]:
         """
         This function allocates the test drives after filtering the drives
 
@@ -228,7 +227,7 @@ class StorageTestBase(TestBase):
         )
         return test_drives
 
-    def devices_with_root_partitions(self) -> List[str]:
+    def devices_with_root_partitions(self) -> list[str]:
         """
         Return devices with "/" mountpoint partition except boot drive
 
@@ -269,7 +268,7 @@ class StorageTestBase(TestBase):
             drive_list.append(boot_drive)
         else:
             AutovalLog.log_info(
-                "Warning - No boot drive found, check " "the test environment"
+                "Warning - No boot drive found, check the test environment"
             )
         return list(set(drive_list))
 
@@ -284,7 +283,7 @@ class StorageTestBase(TestBase):
             AutovalLog.log_info("Skipping BMC-based SSD drive health checking")
 
     def check_block_devices_available(
-        self, drive_list: Optional[List[str]] = None
+        self, drive_list: Optional[list[str]] = None, raise_on_fail: bool = True
     ) -> None:
         """
         Check devices against initial list to identify the drive assertion
@@ -309,6 +308,7 @@ class StorageTestBase(TestBase):
             sorted([drive for drive in available_drives if not drive.startswith("sd")]),
             sorted([drive for drive in expected_drives if not drive.startswith("sd")]),
             "Check available drives against initial list.",
+            raise_on_fail=raise_on_fail,
             component=COMPONENT.STORAGE_DRIVE,
             error_type=ErrorType.DRIVE_ERR,
         )
@@ -317,6 +317,7 @@ class StorageTestBase(TestBase):
                 len(available_hdd_drives),
                 len(expected_hdd_drives),
                 "Check available HDD drive count against initial list.",
+                raise_on_fail=raise_on_fail,
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.DRIVE_ERR,
             )
@@ -668,7 +669,7 @@ class StorageTestBase(TestBase):
             )
         try:
             # Make sure test used drives are available post test execution.
-            self.check_block_devices_available()
+            self.check_block_devices_available(raise_on_fail=False)
         except Exception as e:
             AutovalLog.log_info(f"Seems to be block drive missing due to : {str(e)}.")
         finally:
@@ -677,7 +678,7 @@ class StorageTestBase(TestBase):
                 try:
                     self.drives = self.scan_drives()
                     self.validate_drive_erase_count()
-                    if self.collect_drive_data:
+                    if self.collect_drive_data and self.drive_data.get("before_test"):
                         self.drive_data["after_test"] = self._collect_drive_data()
                         self._validate_drives_smart()
                         self._get_write_amplification()
@@ -709,22 +710,24 @@ class StorageTestBase(TestBase):
 
     def save_drive_logs_async(self, drives: list[Drive]) -> None:
         """
-        Uses AsyncUtils to dump multiple drives data as JSON in <result directory>/SMART
+        Uses AsyncUtils to dump multiple drives data (excluding ublk) as
+        JSON in <result directory>/SMART
 
         Parameter
         ---------
         drives: List[Drive]
             List of 'Drive' objects whose data is to be written to JSON
         """
+        non_ublk_drives = [
+            drive for drive in drives if not drive.block_name.startswith("ublk")
+        ]
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        drives_time = [(drive, timestamp) for drive in drives]
-
-        AsyncUtils.run_async_jobs(
-            [
-                AsyncJob(func=self.save_single_drive_log, args=[this_drive])
-                for this_drive in drives_time
-            ]
-        )
+        non_ublk_drives_time = [(drive, timestamp) for drive in non_ublk_drives]
+        jobs = [
+            AsyncJob(func=self.save_single_drive_log, args=[drive_time])
+            for drive_time in non_ublk_drives_time
+        ]
+        AsyncUtils.run_async_jobs(jobs)
 
     def save_single_drive_log(self, drive_time: tuple) -> None:
         """
@@ -750,13 +753,13 @@ class StorageTestBase(TestBase):
 
     def get_test_drives_from_drives(
         self,
-        drives: Optional[List[Drive]] = None,
+        drives: Optional[list[Drive]] = None,
         drive_type: Optional[str] = None,
         interface: Optional[str] = None,
         model: Optional[str] = None,
         only_boot_drive: bool = False,
         include_boot_drive: bool = False,
-    ) -> List[Drive]:
+    ) -> list[Drive]:
         """
         Filter drives that meet provided criteria for testing.
         Args:

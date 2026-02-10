@@ -4,6 +4,7 @@
 """
 Test validates if the Self Encrypting Drive supports OPAL 2.0 spec
 """
+
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.utils.autoval_errors import ErrorType
 from autoval_ssd.lib.utils.sed_util import SedUtils
@@ -65,15 +66,32 @@ class SedCheck(StorageTestBase):
                 self.log_info(
                     "Validating, if ownership is taken for the opal supported drives."
                 )
+                failed_drives = []
                 for drive in self.opal_drive_objs:
-                    self.validate_in(
-                        str(drive.get_tcg_ownership_status()),
-                        [
-                            str(OwnershipStatus.SET),
-                            str(OwnershipStatus.BLOCKED_AND_SET),
-                        ],
-                        "validating the drive ownership status"
-                        f" {drive.block_name} {drive.serial_number}",
+                    ownership_status = str(drive.get_tcg_ownership_status())
+                    valid_statuses = [
+                        str(OwnershipStatus.SET),
+                        str(OwnershipStatus.BLOCKED_AND_SET),
+                    ]
+                    if ownership_status not in valid_statuses:
+                        failed_drives.append(
+                            f"{drive.block_name} {drive.serial_number} "
+                            f"(status: {ownership_status})"
+                        )
+                        self.log_error(
+                            f"Drive ownership validation failed for "
+                            f"{drive.block_name} {drive.serial_number}: "
+                            f"status {ownership_status} not in {valid_statuses}"
+                        )
+                    else:
+                        self.log_info(
+                            f"Drive ownership validation passed for "
+                            f"{drive.block_name} {drive.serial_number}"
+                        )
+                if failed_drives:
+                    self.validate_empty_list(
+                        failed_drives,
+                        f"Drives with invalid ownership status: {failed_drives}",
                         component=COMPONENT.STORAGE_DRIVE,
                         error_type=ErrorType.DRIVE_ERR,
                     )
