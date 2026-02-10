@@ -1,0 +1,491 @@
+- name: fio_fb_qlc_drive_fill_precondition
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      run_definition:
+        write:
+          template: endurance_2_drive_fill_precondition.fio
+          args:
+            BLOCKSIZE: 256K
+            MDSIZE: 4k
+            IODEPTH: 128
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 72000
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: qlc_di_10_ac_local
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: ac
+      remote_fio: false
+      drive_type: ssd
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_ddi_test: true
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 18000
+  cmd: autoval_ssd.tests.drive_data_integrity.qlc_drive_data_integrity
+- name: qlc_di_10_dc_local
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: dc
+      remote_fio: false
+      drive_type: ssd
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_ddi_test: true
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 18000
+  cmd: autoval_ssd.tests.drive_data_integrity.qlc_drive_data_integrity
+- name: qlc_di_10_reboot_local
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 10
+      cycle_type: reboot
+      remote_fio: false
+      drive_type: ssd
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_ddi_test: true
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 18000
+  cmd: autoval_ssd.tests.drive_data_integrity.qlc_drive_data_integrity
+- name: qlc_back_to_back_power_cycle_test
+  runner: autoval
+  args:
+    test_params:
+      cycle_count: 1
+      cycle_type: dc
+      remote_fio: false
+      drive_type: ssd
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_power_cycle_test: true
+      qlc_fio_runtime: 120
+      num_power_cycles: 10
+  execution_type: REMOTE_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 7200
+  cmd: autoval_ssd.tests.drive_data_integrity.qlc_drive_data_integrity
+- name: fio_fb_qlc_performance_rwmix_sweep
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_perf_test: true
+      enable_performance_metrics_validation: true
+      validate_normalized_bw: true
+      normalized_bw_threshold: 32
+      workload_type: qlc_performance
+      clat_percentiles:
+      - '99.000000'
+      - '99.990000'
+      - '99.999000'
+      - '99.999900'
+      run_definition:
+        randrw:
+          template: qlc_performance.fio
+          args:
+            BLOCKSIZE: 128K,128K
+            IODEPTH: 64
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+            RUNTIME: 10m
+            RWMIXREAD:
+            - 100
+            - 97
+            - 94
+            - 90
+            - 86
+            - 80
+            - 73
+            - 63
+            - 50
+            - 31
+            - 0
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 36000
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: fio_fb_qlc_performance_sweep
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_perf_test: true
+      enable_performance_metrics_validation: true
+      workload_type: qlc_performance
+      clat_percentiles:
+      - '99.000000'
+      - '99.990000'
+      - '99.999000'
+      - '99.999900'
+      run_definition:
+        randrw:
+          template: qlc_performance.fio
+          args:
+            BLOCKSIZE:
+            - 32K,512K
+            - 128K,512K
+            - 32K,128K
+            - 128K,128K
+            IODEPTH: 128
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+            RUNTIME: 20m
+            RWMIXREAD: '80'
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 18000
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: fio_fb_qlc_performance_sweep_with_trim
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_perf_test: true
+      enable_performance_metrics_validation: true
+      workload_type: qlc_performance
+      clat_percentiles:
+      - '99.000000'
+      - '99.990000'
+      - '99.999000'
+      - '99.999900'
+      add_qlc_trim: true
+      run_definition:
+        randrw:
+          template: qlc_performance.fio
+          args:
+            BLOCKSIZE:
+            - 32K,512K
+            - 128K,512K
+            - 32K,128K
+            - 128K,128K
+            IODEPTH: 128
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+            RUNTIME: 20m
+            RWMIXREAD: '80'
+            TRIM_BLOCKSIZE:
+            - 256K
+            - 1M
+            - 32M
+            - 256M
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 36000
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: fio_fb_slc_stress
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      slc_stress_test: true
+      run_definition:
+        write:
+          template: slc_stress.fio
+          args:
+            BLOCKSIZE: ',256K,128K'
+            MDSIZE: 4k
+            IODEPTH: 128
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+            RUNTIME: 30m
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 10800
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: fio_fb_qlc_performance_iodepth_sweep
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_perf_test: true
+      enable_performance_metrics_validation: true
+      workload_type: qlc_performance
+      clat_percentiles:
+      - '99.000000'
+      - '99.990000'
+      - '99.999000'
+      - '99.999900'
+      run_definition:
+        randrw:
+          template: qlc_performance.fio
+          args:
+            BLOCKSIZE:
+            - 32K,512K
+            - 128K,512K
+            - 32K,128K
+            - 128K,128K
+            IODEPTH:
+            - 4
+            - 8
+            - 16
+            - 32
+            - 64
+            - 128
+            - 256
+            - 512
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+            RUNTIME: 10m
+            RWMIXREAD: '80'
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 36000
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: fio_fb_qlc_performance_iodepth_sweep_with_trim
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_perf_test: true
+      enable_performance_metrics_validation: true
+      workload_type: qlc_performance
+      clat_percentiles:
+      - '99.000000'
+      - '99.990000'
+      - '99.999000'
+      - '99.999900'
+      add_qlc_trim: true
+      run_definition:
+        randrw:
+          template: qlc_performance.fio
+          args:
+            BLOCKSIZE:
+            - 32K,512K
+            - 128K,512K
+            - 32K,128K
+            - 128K,128K
+            IODEPTH:
+            - 4
+            - 8
+            - 16
+            - 32
+            - 64
+            - 128
+            - 256
+            - 512
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+            RUNTIME: 10m
+            RWMIXREAD: '80'
+            TRIM_BLOCKSIZE:
+            - 256K
+            - 1M
+            - 32M
+            - 256M
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 108000
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: fio_fb_qlc_performance_30min
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_perf_test: true
+      enable_performance_metrics_validation: true
+      workload_type: qlc_performance
+      clat_percentiles:
+      - '99.000000'
+      - '99.990000'
+      - '99.999000'
+      - '99.999900'
+      run_definition:
+        randrw:
+          template: qlc_performance.fio
+          args:
+            BLOCKSIZE:
+            - 128K,128K
+            - 32K,128K
+            IODEPTH:
+            - 64
+            - 256
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+            RUNTIME: 30m
+            RWMIXREAD: '80'
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 18000
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: fio_fb_qlc_performance_30min_with_trim
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      qlc_perf_test: true
+      enable_performance_metrics_validation: true
+      workload_type: qlc_performance
+      clat_percentiles:
+      - '99.000000'
+      - '99.990000'
+      - '99.999000'
+      - '99.999900'
+      add_qlc_trim: true
+      run_definition:
+        randrw:
+          template: qlc_performance.fio
+          args:
+            BLOCKSIZE:
+            - 128K,128K
+            - 32K,128K
+            IODEPTH:
+            - 64
+            - 256
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+            RUNTIME: 30m
+            RWMIXREAD: '80'
+            TRIM_BLOCKSIZE:
+            - 256K
+            - 1M
+            - 32M
+            - 256M
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 72000
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
+- name: fio_fb_qlc_sprandom_drive_fill_precondition
+  runner: autoval
+  args:
+    test_params:
+      skip_iops_validation: true
+      skip_clean_filesystem: true
+      remove_partition: false
+      test_generic_drives: true
+      t10_dix_format: true
+      clat_percentiles:
+      - '99.000000'
+      - '99.990000'
+      - '99.999000'
+      - '99.999900'
+      run_definition:
+        write:
+          template: qlc_sprandom_drive_fill_precondition.fio
+          args:
+            BLOCKSIZE: 512K
+            MDSIZE: 8k
+            IODEPTH: 128
+            SIZE: 100%
+            NUMJOBS: '1'
+            OFFSET: '0'
+            SPR_REGIONS: 100
+            SPR_OP: '0.1'
+  execution_type: LOCAL_EXEC_TEST
+  hostage: NONE
+  continue_on_error: true
+  skip_health_check: false
+  min_hosts: 1
+  max_hosts: 1
+  timeout: 86400
+  cmd: autoval_ssd.tests.fio_fb.fio_fb
