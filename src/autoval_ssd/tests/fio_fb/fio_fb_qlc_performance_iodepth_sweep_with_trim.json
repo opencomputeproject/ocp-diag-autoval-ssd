@@ -12,7 +12,7 @@
         "randrw": {
             "template": "qlc_performance.fio",
             "args": {
-                "BLOCKSIZE": ["32K,512k","128K,512k","32K,128k","128K,128k"],
+                "BLOCKSIZE": ["32K,1M","128K,1M","32K,128k","128K,128k"],
                 "IODEPTH":[4, 8, 16, 32, 64, 128, 256, 512],
                 "SIZE": "100%",
                 "NUMJOBS": "1",

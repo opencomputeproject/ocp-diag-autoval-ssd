@@ -9,8 +9,8 @@
         "write": {
             "template": "qlc_sprandom_drive_fill_precondition.fio",
             "args": {
-                "BLOCKSIZE": "512K",
-                "MDSIZE": "8k",
+                "BLOCKSIZE": "1M",
+                "MDSIZE": "16k",
                 "IODEPTH":128,
                 "SIZE": "100%",
                 "NUMJOBS": "1",
