@@ -174,8 +174,8 @@
           template: qlc_performance.fio
           args:
             BLOCKSIZE:
-            - 32K,512K
-            - 128K,512K
+            - 32K,1M
+            - 128K,1M
             - 32K,128K
             - 128K,128K
             IODEPTH: 128
@@ -215,8 +215,8 @@
           template: qlc_performance.fio
           args:
             BLOCKSIZE:
-            - 32K,512K
-            - 128K,512K
+            - 32K,1M
+            - 128K,1M
             - 32K,128K
             - 128K,128K
             IODEPTH: 128
@@ -289,8 +289,8 @@
           template: qlc_performance.fio
           args:
             BLOCKSIZE:
-            - 32K,512K
-            - 128K,512K
+            - 32K,1M
+            - 128K,1M
             - 32K,128K
             - 128K,128K
             IODEPTH:
@@ -338,8 +338,8 @@
           template: qlc_performance.fio
           args:
             BLOCKSIZE:
-            - 32K,512K
-            - 128K,512K
+            - 32K,1M
+            - 128K,1M
             - 32K,128K
             - 128K,128K
             IODEPTH:
@@ -473,8 +473,8 @@
         write:
           template: qlc_sprandom_drive_fill_precondition.fio
           args:
-            BLOCKSIZE: 512K
-            MDSIZE: 8k
+            BLOCKSIZE: 1M
+            MDSIZE: 16k
             IODEPTH: 128
             SIZE: 100%
             NUMJOBS: '1'
