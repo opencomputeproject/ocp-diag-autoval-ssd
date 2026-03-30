@@ -8,6 +8,7 @@
     "validate_normalized_bw": true,
     "normalized_bw_threshold": 32,
     "workload_type": "qlc_performance",
+    "enable_performance_metrics_validation": true,
     "clat_percentiles": ["99.000000", "99.990000", "99.999000", "99.999900"],
     "run_definition": {
         "randrw": {
