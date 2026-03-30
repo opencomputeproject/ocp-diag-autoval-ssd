@@ -177,6 +177,7 @@ class FioRunner(TestUtilsBase):
         self.qlc_perf_test = args.get("qlc_perf_test", False)
         self.slc_stress_test = args.get("slc_stress_test", False)
         self.add_qlc_trim = args.get("add_qlc_trim", False)
+        self.workload_type = args.get("workload_type", None)
 
     def test_setup(self) -> None:
         SystemUtils.install_rpms(
@@ -194,9 +195,9 @@ class FioRunner(TestUtilsBase):
             cmd=f"rm -f {FioRunner.MOUNTED_DRIVE_FIO_PATH}", ignore_status=True
         )
 
-        user_criteria = {
-            "project_name": self.host.product_name,
-        }
+        user_criteria = {}
+        if self.workload_type:
+            user_criteria["workload"] = [self.workload_type]
 
         if self.create_boot_drive_partition:
             if self.drives and self.boot_drive in self.drives:
@@ -216,7 +217,9 @@ class FioRunner(TestUtilsBase):
                 + FioRunner.METRICS_TO_VALIDATE,
                 user_criteria=user_criteria,
             )
-        except FileNotFoundError:
+            AutovalLog.log_info("FioRunner threshold config file found")
+        except FileNotFoundError as e:
+            AutovalLog.log_info(f"FioRunner threshold config file not found: {e=}")
             pass
         if (
             "iops" in FioRunner.threshold_obj_dict

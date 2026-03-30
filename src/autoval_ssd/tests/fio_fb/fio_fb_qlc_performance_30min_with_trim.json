@@ -6,6 +6,7 @@
     "t10_dix_format": true,
     "qlc_perf_test": true,
     "workload_type": "qlc_performance",
+    "enable_performance_metrics_validation": true,
     "clat_percentiles": ["99.000000", "99.990000", "99.999000", "99.999900"],
     "add_qlc_trim": true,
     "run_definition": {
