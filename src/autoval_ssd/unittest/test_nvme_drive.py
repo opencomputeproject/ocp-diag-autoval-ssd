@@ -10,7 +10,6 @@ from autoval.lib.utils.autoval_exceptions import TestError, TestStepError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_output import AutovalOutput
 from autoval.lib.utils.file_actions import FileActions
-
 from autoval_ssd.lib.utils.disk_utils import DiskUtils
 from autoval_ssd.lib.utils.pci_utils import PciUtils
 from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive, OwnershipStatus
@@ -60,9 +59,10 @@ CMD_MAP = [
 def apply_mock(func):
     def mocking(*args, **kwargs):
         mock_host = MockHost(cmd_map=CMD_MAP)
-        with mock.patch.object(
-            SSHConn, "run", side_effect=mock_host.run
-        ), mock.patch.object(NVMeUtils, "get_nvme_list", return_value=MOCK_NVME_LIST):
+        with (
+            mock.patch.object(SSHConn, "run", side_effect=mock_host.run),
+            mock.patch.object(NVMeUtils, "get_nvme_list", return_value=MOCK_NVME_LIST),
+        ):
             func(*args, **kwargs)
 
     return mocking
@@ -72,13 +72,13 @@ class MockVendor(NVMeDrive):
     """Mock inheritence of MockNvmeDrive"""
 
     def __init__(self, host, block_name, config=None):
-        super(MockVendor, self).__init__(host, block_name, config)
+        super().__init__(host, block_name, config)
 
     def get_nand_write_param(self):
         """Mocking the nand write as vendor drive"""
         mock_vendor_dict = {
             "field": "Physical media units written_lo",
-            "formula": "%s/%s" % ("NAND_WRITE", pow(1024, 3)),
+            "formula": "{}/{}".format("NAND_WRITE", pow(1024, 3)),
         }
         return mock_vendor_dict
 
@@ -751,3 +751,42 @@ class NvmeDriveUnitTest(unittest.TestCase):
     ):
         mock_get_nvme_id_ctrl_fw_revision.return_value = "dummy_ver+1"
         self.nvme.check_new_firmware_current_firmware("dummy_ver")
+
+    @apply_mock
+    @mock.patch.object(NVMeDrive, "get_id_ctrl")
+    def test_get_sanitize_support_status(self, mock_id_ctrl):
+        """Test get_sanitize_support_status checks sanicap bits correctly."""
+        # All sanitize capabilities supported (bits 0, 1, 2 set)
+        mock_id_ctrl.return_value = {"sanicap": 0x7}
+        result = self.nvme.get_sanitize_support_status()
+        self.assertTrue(result["block_erase"])
+        self.assertTrue(result["crypto_erase"])
+        self.assertTrue(result["overwrite"])
+
+        # Only block erase supported (bit 0 set)
+        mock_id_ctrl.return_value = {"sanicap": 0x1}
+        result = self.nvme.get_sanitize_support_status()
+        self.assertTrue(result["block_erase"])
+        self.assertFalse(result["crypto_erase"])
+        self.assertFalse(result["overwrite"])
+
+        # Only crypto erase supported (bit 1 set)
+        mock_id_ctrl.return_value = {"sanicap": 0x2}
+        result = self.nvme.get_sanitize_support_status()
+        self.assertFalse(result["block_erase"])
+        self.assertTrue(result["crypto_erase"])
+        self.assertFalse(result["overwrite"])
+
+        # No sanitize capabilities (sanicap = 0)
+        mock_id_ctrl.return_value = {"sanicap": 0}
+        result = self.nvme.get_sanitize_support_status()
+        self.assertFalse(result["block_erase"])
+        self.assertFalse(result["crypto_erase"])
+        self.assertFalse(result["overwrite"])
+
+        # sanicap key missing defaults to 0
+        mock_id_ctrl.return_value = {}
+        result = self.nvme.get_sanitize_support_status()
+        self.assertFalse(result["block_erase"])
+        self.assertFalse(result["crypto_erase"])
+        self.assertFalse(result["overwrite"])

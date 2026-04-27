@@ -1,4 +1,5 @@
 # pyre-unsafe
+import json
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -327,6 +328,43 @@ class NvmeUtilsUnitTest(unittest.TestCase):
         # FDP Disabled
         drive = "nvme0"
         self.assertFalse(NVMeUtils.get_fdp_status(self.host, drive))
+
+    def test_sanitize_nvme(self):
+        """Test sanitize_nvme runs the correct command with given action."""
+        dummy_host = MagicMock()
+        NVMeUtils.sanitize_nvme(dummy_host, "nvme0", 2)
+        dummy_host.run.assert_called_with(
+            cmd="nvme sanitize /dev/nvme0 -a 2", timeout=600
+        )
+
+        dummy_host.reset_mock()
+        NVMeUtils.sanitize_nvme(dummy_host, "nvme1", 4)
+        dummy_host.run.assert_called_with(
+            cmd="nvme sanitize /dev/nvme1 -a 4", timeout=600
+        )
+
+    @patch.object(MockHost, "run_get_result")
+    def test_get_sanitize_log(self, mock_run_get_result):
+        """Test get_sanitize_log parses JSON output correctly."""
+        mock_result = MagicMock()
+        mock_result.stdout = json.dumps(
+            {
+                "sprog": 65535,
+                "sstat": 0,
+                "scdw10": 2,
+                "et_bde": 0,
+                "et_ce": 0,
+                "et_owe": 0,
+            }
+        )
+        mock_run_get_result.return_value = mock_result
+        result = NVMeUtils.get_sanitize_log(self.host, "nvme0")
+        mock_run_get_result.assert_called_once_with(
+            "nvme sanitize-log /dev/nvme0 -o json"
+        )
+        self.assertEqual(result["sprog"], 65535)
+        self.assertEqual(result["sstat"], 0)
+        self.assertEqual(result["scdw10"], 2)
 
         # Invalid Field
         drive = "nvme2"

@@ -1,0 +1,28 @@
+{
+    "drive_type": "ssd",
+    "drive_interface": "nvme",
+    "skip_iops_validation": true,
+    "sanitize_actions": [
+        "block_erase",
+        "crypto_erase"
+    ],
+    "sanitize_cycles": 1,
+    "verify_pattern": true,
+    "poll_interval": 30,
+    "sanitize_timeout": 600,
+    "cycle_count": 1,
+    "run_definition": {
+        "filesystem_io": {
+            "template": "nvme_format_template.fio",
+            "args": {
+                "NAME": "fio_sanitize",
+                "RW": "write",
+                "BLKSIZE": "4K",
+                "RUNTIME": "3m",
+                "DEPTH": 128,
+                "DO_VERIFY": 1,
+                "BUFFER_PATTERN": "0xA5"
+            }
+        }
+    }
+}

@@ -12,7 +12,6 @@ from time import sleep
 from typing import Optional
 
 from autoval.lib.host.component.component import COMPONENT
-
 from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_exceptions import AutovalFileNotFound, TestError
 from autoval.lib.utils.autoval_log import AutovalLog
@@ -22,9 +21,7 @@ from autoval.lib.utils.file_actions import FileActions
 from autoval.lib.utils.generic_utils import GenericUtils
 from autoval.lib.utils.result_handler import ResultHandler
 from autoval.lib.utils.site_utils import SiteUtils
-
 from autoval_ssd.lib.utils.disk_utils import DiskUtils
-
 from autoval_ssd.lib.utils.pci_utils import PciUtils
 from autoval_ssd.lib.utils.storage.drive import Drive, DriveInterface
 from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
@@ -355,6 +352,25 @@ class NVMeDrive(Drive):
         )
         return False
 
+    def get_sanitize_support_status(self) -> dict:
+        """Check NVMe sanitize capabilities from the SANICAP field.
+
+        Returns:
+            Dictionary with sanitize capability flags:
+            block_erase, crypto_erase, overwrite. Each is True if supported.
+        """
+        id_ctrl = self.get_id_ctrl()
+        sanicap = id_ctrl.get("sanicap", 0)
+        capabilities = {
+            "block_erase": bool(sanicap & 0x1),
+            "crypto_erase": bool(sanicap & 0x2),
+            "overwrite": bool(sanicap & 0x4),
+        }
+        AutovalLog.log_info(
+            f"{self.block_name} sanitize capabilities (sanicap={sanicap}): {capabilities}"
+        )
+        return capabilities
+
     def get_error_log(self):
         """
         Method to retrieve specified number of error log entries from a given device
@@ -548,6 +564,38 @@ class NVMeDrive(Drive):
         """
         dut_logdir = SiteUtils.get_dut_logdir(self.host.hostname)
         cmd = f"nvme ocp telemetry-string-log /dev/{self.block_name}"
+        self.host.run(cmd=cmd, ignore_status=True, working_directory=dut_logdir)
+
+    def get_ocp_error_recovery_log(self) -> None:
+        """
+        Retrieves the OCP Error Recovery log (0xC1) from the NVMe drive.
+        """
+        dut_logdir = SiteUtils.get_dut_logdir(self.host.hostname)
+        cmd = f"nvme ocp error-recovery-log /dev/{self.block_name}"
+        self.host.run(cmd=cmd, ignore_status=True, working_directory=dut_logdir)
+
+    def get_ocp_device_capability_log(self) -> None:
+        """
+        Retrieves the OCP Device Capabilities log (0xC4) from the NVMe drive.
+        """
+        dut_logdir = SiteUtils.get_dut_logdir(self.host.hostname)
+        cmd = f"nvme ocp device-capability-log /dev/{self.block_name}"
+        self.host.run(cmd=cmd, ignore_status=True, working_directory=dut_logdir)
+
+    def get_ocp_unsupported_reqs_log(self) -> None:
+        """
+        Retrieves the OCP Unsupported Requirements log (0xC5) from the NVMe drive.
+        """
+        dut_logdir = SiteUtils.get_dut_logdir(self.host.hostname)
+        cmd = f"nvme ocp unsupported-reqs-log /dev/{self.block_name}"
+        self.host.run(cmd=cmd, ignore_status=True, working_directory=dut_logdir)
+
+    def get_ocp_tcg_configuration_log(self) -> None:
+        """
+        Retrieves the OCP TCG Configuration log (0xC7) from the NVMe drive.
+        """
+        dut_logdir = SiteUtils.get_dut_logdir(self.host.hostname)
+        cmd = f"nvme ocp tcg-configuration-log /dev/{self.block_name}"
         self.host.run(cmd=cmd, ignore_status=True, working_directory=dut_logdir)
 
     def get_internal_log(self, timeout: int, phase: str = "", flag: str = "") -> bool:
@@ -1137,6 +1185,28 @@ class NVMeDrive(Drive):
         To perform secure erase operation on NVMe drive.
         """
         return NVMeUtils.format_nvme(self.host, self.block_name, secure_erase_option)
+
+    def sanitize_drive(self, action: int) -> None:
+        """Issue NVMe sanitize command on the drive.
+
+        Args:
+            action: Sanitize action code.
+                1 - Exit Failure Mode
+                2 - Block Erase
+                3 - Overwrite
+                4 - Crypto Erase
+        """
+        ctrl_name = self.get_drive_name()
+        NVMeUtils.sanitize_nvme(self.host, ctrl_name, action)
+
+    def get_sanitize_log(self) -> dict:
+        """Get the NVMe sanitize status log for this drive's controller.
+
+        Returns:
+            Parsed sanitize log with fields like sprog, sstat
+        """
+        ctrl_name = self.get_drive_name()
+        return NVMeUtils.get_sanitize_log(self.host, ctrl_name)
 
     def get_drive_temperature(self) -> int:
         """Get Drive Temperature
