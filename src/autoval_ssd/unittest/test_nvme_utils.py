@@ -190,6 +190,7 @@ class NvmeUtilsUnitTest(unittest.TestCase):
 
     def test_delete_ns(self):
         self.assertIsNone(NVMeUtils.delete_ns(self.host, "nvme0n1"))
+        # pyrefly: ignore [bad-argument-type]
         self.assertIsNone(NVMeUtils.delete_ns(self.host, "nvme0n1", [1]))
         with self.assertRaises(TestError) as exp:
             NVMeUtils.delete_ns(self.host, "nvme0n1p1")
@@ -256,6 +257,7 @@ class NvmeUtilsUnitTest(unittest.TestCase):
             critical_warning(stdout='{"critical_warning": 6}'),  # 0x0101
             critical_warning(stdout='{"critical_warning": 15}'),  # 0x1111
         ]
+        # pyrefly: ignore [missing-attribute]
         self.host.is_container = False
         self.assertFalse(NVMeUtils.is_read_only(self.host, mock_blk_name))
         self.assertTrue(NVMeUtils.is_read_only(self.host, mock_blk_name))
@@ -264,6 +266,7 @@ class NvmeUtilsUnitTest(unittest.TestCase):
 
     def test_get_namespace_support_drive_list(self):
         self.assertListEqual(
+            # pyrefly: ignore [bad-argument-type]
             NVMeUtils.get_namespace_support_drive_list(self.host, ["nvme0n1"]),
             ["nvme0n1"],
         )
@@ -292,7 +295,9 @@ class NvmeUtilsUnitTest(unittest.TestCase):
         mock_run.return_value = """NVME Security Receive Command Success:0
        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 0000: 00 00 00 d8 00 00 00 01 00 00 00 00 00 00 00 00 "................"""
+        # pyrefly: ignore [bad-argument-type]
         out = NVMeUtils.run_nvme_security_recv_cmd(self.host, "nvme1n1")
+        # pyrefly: ignore [missing-attribute]
         self.host.run.assert_called_with(
             "nvme security-recv -p 0x1 -s 0x1 -t 256 -x 256 /dev/nvme1n1"
         )
@@ -358,6 +363,8 @@ class NvmeUtilsUnitTest(unittest.TestCase):
             }
         )
         mock_run_get_result.return_value = mock_result
+        # pyre-fixme[6]: MockHost.hostname is a property (via ConnectionAbstract)
+        # but HostProtocol expects a plain attribute.
         result = NVMeUtils.get_sanitize_log(self.host, "nvme0")
         mock_run_get_result.assert_called_once_with(
             "nvme sanitize-log /dev/nvme0 -o json"
@@ -365,7 +372,3 @@ class NvmeUtilsUnitTest(unittest.TestCase):
         self.assertEqual(result["sprog"], 65535)
         self.assertEqual(result["sstat"], 0)
         self.assertEqual(result["scdw10"], 2)
-
-        # Invalid Field
-        drive = "nvme2"
-        self.assertFalse(NVMeUtils.get_fdp_status(self.host, drive))

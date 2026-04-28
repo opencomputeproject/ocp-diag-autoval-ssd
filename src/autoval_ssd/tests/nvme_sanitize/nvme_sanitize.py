@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# pyre-safe
+# pyre-strict
 import time
 
 from autoval.lib.host.component.component import COMPONENT
@@ -9,6 +9,7 @@ from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval_ssd.lib.utils.fio_runner import FioRunner
+from autoval_ssd.lib.utils.host_protocol import HostProtocol
 from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
 from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
@@ -114,11 +115,12 @@ class NvmeSanitize(StorageTestBase):
         """
         for drive in self.test_drives:
             capabilities = drive.get_sanitize_support_status()
-            if not capabilities.get(action, False):
-                self.log_info(
-                    f"{drive.block_name} does not support sanitize action {action}"
-                )
-                return False
+            if capabilities.get(action, False):
+                continue
+            self.log_info(
+                f"{drive.block_name} does not support sanitize action {action}"
+            )
+            return False
         return True
 
     def _sanitize_and_verify(
@@ -241,7 +243,7 @@ class NvmeSanitize(StorageTestBase):
                     pass
         return -1
 
-    def _verify_pattern(self, host: "Host", device: str, pattern: str) -> None:
+    def _verify_pattern(self, host: HostProtocol, device: str, pattern: str) -> None:
         """Run FIO to verify the drive is filled with the expected pattern.
 
         Args:

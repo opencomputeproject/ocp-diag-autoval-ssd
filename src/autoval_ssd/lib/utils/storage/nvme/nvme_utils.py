@@ -15,6 +15,7 @@ from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_utils import AutovalUtils
+from autoval_ssd.lib.utils.host_protocol import HostProtocol
 
 
 class NVMeDeviceEnum(Enum):
@@ -234,7 +235,7 @@ class NVMeUtils:
         host.run(cmd=cmd, timeout=timeout)  # noqa
 
     @staticmethod
-    def sanitize_nvme(host, device: str, action: int) -> None:
+    def sanitize_nvme(host: HostProtocol, device: str, action: int) -> None:
         """Sanitize NVMe drive.
 
         Args:
@@ -252,7 +253,7 @@ class NVMeUtils:
         host.run(cmd=cmd, timeout=timeout)
 
     @staticmethod
-    def get_sanitize_log(host, device: str) -> dict:
+    def get_sanitize_log(host: HostProtocol, device: str) -> dict:
         """Get NVMe sanitize log.
 
         Args:
