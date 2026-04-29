@@ -12,10 +12,10 @@ from typing import Any, Optional, Union
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.host.host import Host
 from autoval.lib.utils.autoval_errors import ErrorType
-
 from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_utils import AutovalUtils
+from autoval_ssd.lib.utils.host_protocol import HostProtocol
 
 
 class NVMeDeviceEnum(Enum):
@@ -233,6 +233,40 @@ class NVMeUtils:
             timeout = 36100  # 10 hours noqa
         AutovalLog.log_info("Running command: %s" % cmd)
         host.run(cmd=cmd, timeout=timeout)  # noqa
+
+    @staticmethod
+    def sanitize_nvme(host: HostProtocol, device: str, action: int) -> None:
+        """Sanitize NVMe drive.
+
+        Args:
+            host: Host object to run the command on.
+            device: Controller device name (e.g. 'nvme0').
+            action: Sanitize action code.
+                1 - Exit Failure Mode
+                2 - Block Erase
+                3 - Overwrite
+                4 - Crypto Erase
+        """
+        cmd = f"nvme sanitize /dev/{device} -a {action}"
+        timeout = 600
+        AutovalLog.log_info(f"Running command: {cmd}")
+        host.run(cmd=cmd, timeout=timeout)
+
+    @staticmethod
+    def get_sanitize_log(host: HostProtocol, device: str) -> dict:
+        """Get NVMe sanitize log.
+
+        Args:
+            host: Host object to run the command on.
+            device: Controller device name (e.g. 'nvme0').
+
+        Returns:
+            Parsed sanitize log containing fields like sprog, sstat,
+            scdw10, et_bde, et_ce, et_owe, etc.
+        """
+        cmd = f"nvme sanitize-log /dev/{device} -o json"
+        ret = host.run_get_result(cmd)
+        return AutovalUtils.loads_json(ret.stdout)
 
     @staticmethod
     def get_nvme_temperature(host, devices):
