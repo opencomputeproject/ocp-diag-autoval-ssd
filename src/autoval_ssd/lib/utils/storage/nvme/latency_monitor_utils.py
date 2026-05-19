@@ -71,6 +71,7 @@ class LatencyMonitor:
         self.max_latency_lm_validation = self.test_control.get(
             "max_latency_lm_validation", False
         )
+        self.latency_monitor_config: dict[str, Any] = {"latency_monitor": []}
         json_path = "/cfg/drive_latency_monitor.json"
         try:
             abs_path = NVMeDrive.get_target_path()
@@ -320,7 +321,7 @@ class LatencyMonitor:
         for drive in self.test_drives:
             device_name = self.get_namespace_controller(str(drive))
             if self.ocp_lm_commands:
-                ocp_lm_disable_cmd = f"nvme ocp set-latency-monitor-feature /dev/{device_name} -t 0 -a 0 -b 0 -d 0 -f 0 -w 0 -r 0 -l 0 -e 0"
+                ocp_lm_disable_cmd = f"nvme ocp set-latency-monitor-feature /dev/{device_name} -t 0 -a 0 -b 0 -c 0 -d 0 -f 0 -w 0 -r 0 -l 0 -e 0"
 
                 out = self.host.run_get_result(  # noqa
                     ocp_lm_disable_cmd,
@@ -441,7 +442,9 @@ class LatencyMonitor:
                         )
                     elif self.max_latency_lm_validation:
                         self.validate_max_latency_results(
-                            output_dict, drive, LM_FIELDS_TO_VALIDATE_MAX_LATENCY
+                            output_dict,
+                            drive,
+                            LM_FIELDS_TO_VALIDATE_MAX_LATENCY,
                         )
                     else:
                         self.validate_results(

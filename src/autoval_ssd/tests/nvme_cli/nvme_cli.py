@@ -19,12 +19,13 @@ from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval.lib.utils.file_actions import FileActions
 from autoval.lib.utils.site_utils import SiteUtils
+from autoval_ssd.lib.utils.fio.fio_synth_flash_utils import FioSynthFlashUtils
 from autoval_ssd.lib.utils.storage.nvme.fdp_utils import FDPUtils
+from autoval_ssd.lib.utils.storage.nvme.latency_monitor_utils import LatencyMonitor
 from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
 from autoval_ssd.lib.utils.storage.nvme.nvme_resize_utils import NvmeResizeUtil
 from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
 from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
-from autoval_ssd.lib.utils.system_utils import SystemUtils
 
 
 class NvmeCli(StorageTestBase):
@@ -90,16 +91,6 @@ class NvmeCli(StorageTestBase):
                     new_nvme_cli_command_output,
                 )
 
-    def install_nvme_version(self, version: str) -> None:
-        """
-        Install a specific version of nvme-cli on the host.
-
-        Args:
-            version: The nvme-cli version string to install (e.g. "2.10.2").
-        """
-        self.log_info(f"Installing nvme-cli version {version}")
-        SystemUtils.install_rpms(self.host, [f"nvme-cli-{version}"])
-
     def run_nvme_cli_commands(self, nvme_version: str) -> list[dict]:
         """
         Run all nvme-cli commands for this test.
@@ -123,6 +114,7 @@ class NvmeCli(StorageTestBase):
         )
         if self.fdp_setup:
             self.validate_fdp()
+        self.validate_latency_monitor()
         return command_outputs
 
     def validate_nvme_drives(self, drive: NVMeDrive, nvme_version: str) -> list[dict]:
@@ -585,6 +577,53 @@ class NvmeCli(StorageTestBase):
         # pyrefly: ignore [bad-argument-type]
         FDPUtils.fdp_cleanup(self.host, nvme_id_ctrls)
         AutovalLog.log_info("FDP cleanup completed")
+
+    def validate_latency_monitor(self) -> None:
+        """
+        Enables latency monitor, run the workload and validate the bucke counter on single drive.
+        """
+        nvme_version = NVMeUtils.get_nvme_version(self.host)
+        if not NVMeUtils.compare_versions("2.9.0", nvme_version):
+            self.log_info(
+                "Skipping latency monitor test. Nvme version 2.9 or higher required for ocp lacteny monitor cmds"
+            )
+            return
+
+        FioSynthFlashUtils.tool_setup(self.host)
+        test_drives = [
+            drive for drive in self.test_drives if drive.block_name != self.boot_drive
+        ][:1]
+        self.test_control["max_latency_lm_validation"] = True
+        self.test_control["ocp_lm_commands"] = True
+        workload = "Nvme_Cli_Wkld"
+        work_dir = self.dut_logdir[self.host.hostname]
+        self.latency_monitor = LatencyMonitor(
+            host=self.host,
+            test_drives=test_drives,
+            test_control=self.test_control,
+        )
+        lm_enabled_drives = self.latency_monitor.enable(
+            workload=workload, working_directory=work_dir
+        )
+        self.log_info(f"Running the {workload} Workload.")
+        # Generate the run folder locations
+        run_folder = f"test_{workload}"
+        # Run synthflash
+        for drive in test_drives:
+            result_folder = f"{run_folder}_{drive.block_name}_results"
+            device = f"/dev/{drive.block_name}"
+            # Run workload
+            cmd = f"cd {work_dir} && fiosynth -d {device} -w {workload} -f {result_folder} -n 1 -g y --lm"
+            self.log_info(f"Starting command: {cmd}")
+            # pyrefly: ignore [missing-attribute]
+            self.host.run_get_result(cmd, timeout=70500)
+
+        self.latency_monitor.collect_logs(workload, work_dir)
+        self.latency_monitor.parse_and_validate_results(
+            synth_workload_result_dir=work_dir,
+            lm_enabled_drives=lm_enabled_drives,
+        )
+        self.latency_monitor.disable(working_directory=work_dir)
 
     def compare_command_outputs(
         self,
