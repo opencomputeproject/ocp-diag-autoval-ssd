@@ -115,6 +115,7 @@ class DriveDataIntegrityTest(StorageTestBase):
         self.stop_fio_process_check = False
         self.control_server_logs = SiteUtils.get_control_server_logdir()
         self.fiolog_server_dir = None
+        self.fio_process_queue = []
 
     def setup(self, *args, **kwargs) -> None:
         """Prerequisite for drive data integrity test.
