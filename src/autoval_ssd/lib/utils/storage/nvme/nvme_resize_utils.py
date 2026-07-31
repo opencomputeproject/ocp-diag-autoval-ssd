@@ -6,8 +6,7 @@ import math
 import re
 import time
 from enum import Enum
-
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.host.host import Host
@@ -17,7 +16,6 @@ from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread  # noqa
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval_ssd.lib.utils.storage.drive import Drive
-
 from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
 
 BYTES_PER_TB = 1000**4
@@ -147,7 +145,7 @@ class NvmeResizeUtil:
         return int(num_bytes / block_size)
 
     @staticmethod
-    def get_lbaf_details(host: Host, device: str, nsid: int = 1) -> Dict[str, int]:
+    def get_lbaf_details(host: Host, device: str, nsid: int = 1) -> dict[str, int]:
         """
         Get the lbaf, ms, and lbads values either for a given lbaf value or the one marked as '(in use)'.
         Args:
@@ -178,7 +176,7 @@ class NvmeResizeUtil:
         )
 
     @staticmethod
-    def get_nsid_list(host: Host, device: str) -> List[int]:
+    def get_nsid_list(host: Host, device: str) -> list[int]:
         """
         Get a list of nsid values from the device.
 
@@ -237,7 +235,7 @@ class NvmeResizeUtil:
     @staticmethod
     def ns_resize(
         host: Host,
-        nvme_id_ctrls: Dict[str, Any],
+        nvme_id_ctrls: dict[str, Any],
         sweep_param_unit: SweepParamUnitEnum,
         sweep_param_key: SweepParamKeyEnum,
         device: str,
@@ -325,9 +323,9 @@ class NvmeResizeUtil:
         nsze = NvmeResizeUtil.get_lba_counts(num_bytes, block_size, sweep_param_value)
         ncap = nsze
 
-        device_combination: List[str] = copy.copy(kwargs.get("combination", []))
+        device_combination: list[str] = copy.copy(kwargs.get("combination", []))
         use_existing_ns: bool = kwargs.get("use_existing_ns", False)
-        lbaf_to_flbas_map: Dict[str, int] = kwargs.get("lbaf_to_flbas_map", {})
+        lbaf_to_flbas_map: dict[str, int] = kwargs.get("lbaf_to_flbas_map", {})
         AutovalLog.log_info(f"use_existing_ns: {use_existing_ns}")
 
         nsid_values = NvmeResizeUtil.get_nsid_list(host, device)
@@ -392,6 +390,7 @@ class NvmeResizeUtil:
             )
             AutovalUtils.validate_equal(
                 nsze,
+                # pyrefly: ignore [missing-attribute]
                 nvme_id_ns.get("nsze", -1),
                 f"{device}: validating actual nsze",
                 component=COMPONENT.STORAGE_DRIVE,
@@ -577,7 +576,7 @@ class NvmeResizeUtil:
 
     @staticmethod
     def detach_delete_ns(
-        host: Host, device: str, cntlid: int, nsid_values: List[int]
+        host: Host, device: str, cntlid: int, nsid_values: list[int]
     ) -> None:
         """
         This function iterates over a list of namespace identifiers (nsid_values) and performs
@@ -623,24 +622,12 @@ class NvmeResizeUtil:
         nsid: int,
         cntlid: int,
         block_size: int = 4096,
+        wait_for_ns_ready: bool = False,
     ) -> None:
-        """
-        This function first creates a namespace with the given parameters and then attaches it to the specified controller.
-
-        Args:
-            host: The host object where the operations are performed.
-            device: The NVMe device identifier to which the namespace will be attached.
-            nsize: The size of the namespace to be created.
-            ncap: The capacity of the namespace to be created.
-            block_size: The block size for the namespace.
-            flbas_flag: The formatted LBA size flag for the namespace.
-            nsid: The namespace identifier to be used.
-            cntlid: The controller identifier to which the namespace will be attached.
-        """
         AutovalUtils.validate_no_exception(
             NVMeUtils.create_ns,
             [host, device, nsize, ncap, block_size, flbas_flag],
-            f"{device }: create-ns with nsze {nsize}",
+            f"{device}: create-ns with nsze {nsize}",
             component=COMPONENT.STORAGE_DRIVE,
             error_type=ErrorType.NVME_ERR,
         )
@@ -654,9 +641,11 @@ class NvmeResizeUtil:
         AutovalUtils.validate_no_exception(
             NVMeUtils.reset, [host, device], f"{device}: reset"
         )
+        if wait_for_ns_ready:
+            NvmeResizeUtil.wait_for_no_open_handles(host, f"{device}n{nsid}")
 
     @staticmethod
-    def get_lbaf_to_flbas_map(host: Host, drive: str) -> Dict[str, int]:
+    def get_lbaf_to_flbas_map(host: Host, drive: str) -> dict[str, int]:
         """
         Extracts the supported LBA formats and their corresponding indices for a given drive.
 
@@ -685,20 +674,28 @@ class NvmeResizeUtil:
 
     @staticmethod
     def validate_drives_support_dix_resize_lba_formats(
-        host: Host, drive_list: List[Drive]
-    ) -> Dict[str, int]:
+        host: Host,
+        drive_list: list[Drive],
+        required_formats: set[str] | None = None,
+        warning: bool = False,
+    ) -> dict[str, int] | None:
         """
         Checks the supported LBA formats for each drive in the provided output.
-        This function runs a command to identify the namespace of each drive and then checks the output
-        for specific patterns that indicate the supported LBA formats.
+
         Args:
             host: The host on which to run the command.
             drive_list: A list of drives to check for supported LBA formats.
+            required_formats: Set of required LBA format strings. Defaults to
+                {"512", "4096", "4096+64"}.
+            warning: If True, logs a warning and returns None when a drive does
+                not support the required formats instead of failing the test.
+
         Returns:
-            lbaf_to_flbas_map: A dictionary containing the supported LBA formats for each drive and their
-            corresponding values to be used during resize
+            A dictionary mapping LBA format strings to their FLBAS values,
+            or None if ``warning`` is True and a drive lacks required formats.
         """
-        required_formats = {"512", "4096", "4096+64"}
+        if required_formats is None:
+            required_formats = {"512", "4096", "4096+64"}
         lbaf_to_flbas_map = {}
 
         for drive in drive_list:
@@ -706,12 +703,59 @@ class NvmeResizeUtil:
                 host, drive.block_name
             )
 
-            AutovalUtils.validate_condition(
-                required_formats.issubset(lbaf_to_flbas_map.keys()),
-                f"{drive.block_name} supports all DIX LBA Formats",
-                component=COMPONENT.STORAGE_DRIVE,
-                error_type=ErrorType.DRIVE_ERR,
-                log_on_pass=True,
-            )
+            if not required_formats.issubset(lbaf_to_flbas_map.keys()):
+                msg = f"{drive.block_name} does not support required LBA formats {required_formats}"
+                if warning:
+                    AutovalLog.log_info(f"WARNING: {msg}")
+                    return None
+                AutovalUtils.validate_condition(
+                    False,
+                    msg,
+                    component=COMPONENT.STORAGE_DRIVE,
+                    error_type=ErrorType.DRIVE_ERR,
+                )
+            else:
+                AutovalLog.log_info(
+                    f"{drive.block_name} supports all required LBA Formats"
+                )
 
         return lbaf_to_flbas_map
+
+    @staticmethod
+    def wait_for_no_open_handles(
+        host: Host,
+        namespace_dev: str,
+        timeout: int = 60,
+        poll_interval: int = 10,
+    ) -> None:
+        """
+        Wait until no processes have open handles on the given NVMe namespace device.
+
+        Args:
+            host: The host on which to check.
+            namespace_dev: The namespace device path (e.g., "nvme0n1").
+            timeout: Maximum seconds to wait (default: 60).
+            poll_interval: Seconds between polls (default: 10).
+
+        Raises:
+            TestError: If open handles remain after the timeout period.
+        """
+        deadline = time.time() + timeout
+        result = ""
+        while time.time() < deadline:
+            result = host.run(
+                f"lsof /dev/{namespace_dev} 2>/dev/null | grep -v '^COMMAND'",
+                ignore_status=True,
+            )
+            if not result.strip():
+                return
+            AutovalLog.log_info(
+                f"Waiting for open handles on /dev/{namespace_dev} to close..."
+            )
+            time.sleep(poll_interval)
+        raise TestError(
+            f"Timed out waiting for open handles on /dev/{namespace_dev} to close "
+            f"after {timeout}s. Last lsof output:\n{result}",
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.NVME_ERR,
+        )

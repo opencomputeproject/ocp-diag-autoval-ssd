@@ -5,13 +5,12 @@
 import json
 import os
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 from autoval.lib.host.component.component import COMPONENT
-
 from autoval.lib.host.host import Host
 from autoval.lib.utils.autoval_errors import ErrorType
-from autoval.lib.utils.autoval_exceptions import TestError
+from autoval.lib.utils.autoval_exceptions import TestError, TestStepError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval_ssd.lib.utils.storage.nvme.nvme_drive import NVMeDrive
@@ -26,7 +25,21 @@ class FDPUtils:
     """
 
     @staticmethod
-    def validate_fdp_support(host: Host, nvme_id_ctrls: Dict[str, Any]) -> None:
+    def get_fdp_unsupported_drives(
+        host: Host,
+        nvme_id_ctrls: dict[str, Any],
+    ) -> list[str]:
+        unsupported_drives = []
+        for device in nvme_id_ctrls:
+            ctratt_value = nvme_id_ctrls[device]["ctratt"]
+            if not (ctratt_value & (1 << 19)):
+                unsupported_drives.append(device)
+        return unsupported_drives
+
+    @staticmethod
+    def validate_fdp_support(
+        host: Host, nvme_id_ctrls: dict[str, Any], warning: bool = False
+    ) -> bool:
         """
         This function checks if the FDP is supported for each test drive and also validates the FDP config.
         Args:
@@ -37,19 +50,30 @@ class FDPUtils:
         original_nvme_version = NVMeUtils.get_nvme_version(host)
         nvme_installed = FDPUtils.validate_nvme_version(host)
 
-        nvme_ctrls = [*nvme_id_ctrls]  # Device List
-        for device in nvme_ctrls:
-            ctratt_value = nvme_id_ctrls[device]["ctratt"]
-            bit_19 = ctratt_value & (1 << 19)
-            AutovalUtils.validate_not_equal(
-                bit_19,
-                0,
-                f"{device}: Supports FDP",
+        unsupported_drives = FDPUtils.get_fdp_unsupported_drives(host, nvme_id_ctrls)
+
+        if unsupported_drives:
+            msg = f"Drives not supporting FDP: {', '.join(unsupported_drives)}"
+            if warning:
+                AutovalLog.log_info(f"WARNING: {msg}. Skipping FDP setup.")
+                if nvme_installed:
+                    SystemUtils.install_rpms(
+                        host, [f"nvme-cli-{original_nvme_version}"]
+                    )
+                return False
+            AutovalUtils.validate_empty_list(
+                unsupported_drives,
+                "Drives not supporting FDP",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.NVME_ERR,
-                log_on_pass=True,
             )
+            if nvme_installed:
+                SystemUtils.install_rpms(host, [f"nvme-cli-{original_nvme_version}"])
+            return False
 
+        AutovalLog.log_info("All drives support FDP")
+
+        for device in nvme_id_ctrls:
             fdp_config_out = FDPUtils.get_fdp_config(host, device)
 
             relative_cfg_file_path = os.path.join("/cfg/", "fdp_config.json")
@@ -73,6 +97,7 @@ class FDPUtils:
             )
         if nvme_installed:
             SystemUtils.install_rpms(host, [f"nvme-cli-{original_nvme_version}"])
+        return True
 
     @staticmethod
     def validate_nvme_version(host: Host) -> bool:
@@ -111,7 +136,7 @@ class FDPUtils:
         return nvme_installed
 
     @staticmethod
-    def get_fdp_config(host: Host, device: str) -> Dict[str, Any]:
+    def get_fdp_config(host: Host, device: str) -> dict[str, Any]:
         """
         This function gets the FDP configuration for a given device.
 
@@ -145,14 +170,15 @@ class FDPUtils:
                         if line.strip().startswith("[")
                     ]
                 else:
+                    # pyrefly: ignore [unsupported-operation]
                     fdp_dict[key] = int(value)
 
         return fdp_dict
 
     @staticmethod
     def validate_fdp_config(
-        fdp_config_out: Dict[str, Any], expected_fdp_config: Dict[str, Any]
-    ) -> List[str]:
+        fdp_config_out: dict[str, Any], expected_fdp_config: dict[str, Any]
+    ) -> list[str]:
         """
         Validates the FDP configuration against expected values.
 
@@ -167,13 +193,14 @@ class FDPUtils:
         for key, threshold in expected_fdp_config.items():
             actual_value = fdp_config_out.get(key)
             if key == "namespaces_supported":
+                # pyrefly: ignore [bad-argument-type, no-matching-overload]
                 if int(actual_value) < int(threshold.get("value")):
                     errors.append(
-                        f'{key} mismatch: Actual value: {actual_value} is less than Expected minimum: {threshold.get("value")}'
+                        f"{key} mismatch: Actual value: {actual_value} is less than Expected minimum: {threshold.get('value')}"
                     )
             elif actual_value != threshold.get("value"):
                 errors.append(
-                    f'{key} mismatch: Actual value: {actual_value}, Expected value: {threshold.get("value")}'
+                    f"{key} mismatch: Actual value: {actual_value}, Expected value: {threshold.get('value')}"
                 )
 
         actual_reclaim_list = fdp_config_out.get("reclaim_unit_handle_list")
@@ -189,7 +216,34 @@ class FDPUtils:
         return errors
 
     @staticmethod
-    def fdp_setup(host: Host, nvme_id_ctrls: Dict[str, Any]) -> None:
+    def create_namespace(
+        host: Host,
+        device: str,
+        nvmcap: int,
+        cntlid: int,
+        nsid: int,
+        wait_for_ns_ready: bool = False,
+    ) -> None:
+        current_lbaf_details = NvmeResizeUtil.get_lbaf_details(host, device)
+        flbas_flag = current_lbaf_details["lbaf"]
+        block_size = 4096
+
+        NvmeResizeUtil.create_attach_ns(
+            host,
+            device,
+            nsize=nvmcap,
+            ncap=nvmcap,
+            flbas_flag=flbas_flag,
+            nsid=nsid,
+            cntlid=cntlid,
+            block_size=block_size,
+            wait_for_ns_ready=wait_for_ns_ready,
+        )
+
+    @staticmethod
+    def fdp_setup(
+        host: Host, nvme_id_ctrls: dict[str, Any], wait_for_ns_ready: bool = False
+    ) -> None:
         """
         This function sets up the FDP (Flash Data Path) for NVMe drives.
 
@@ -212,39 +266,37 @@ class FDPUtils:
                     component=COMPONENT.STORAGE_DRIVE,
                     error_type=ErrorType.NVME_ERR,
                 )
+            nvmcap = int(int(tnvmcap) / 4096)
+
+            ns_detached = False
             nsid_values = NvmeResizeUtil.get_nsid_list(host, device)
+            nsid = nsid_values[0] if nsid_values else 1
             if nsid_values:
                 NvmeResizeUtil.detach_delete_ns(host, device, cntlid, nsid_values)
+                ns_detached = True
 
-            AutovalUtils.validate_condition(
-                NVMeUtils.set_fdp(host, device, enable=True),
-                f"{device}: Enable FDP",
-                component=COMPONENT.STORAGE_DRIVE,
-                error_type=ErrorType.NVME_ERR,
-            )
+            try:
+                AutovalUtils.validate_condition(
+                    NVMeUtils.set_fdp(host, device, enable=True),
+                    f"{device}: Enable FDP",
+                    component=COMPONENT.STORAGE_DRIVE,
+                    error_type=ErrorType.NVME_ERR,
+                )
+                AutovalUtils.validate_condition(
+                    NVMeUtils.get_fdp_status(host, device),
+                    f"{device}: Confirm FDP is Enabled",
+                    component=COMPONENT.STORAGE_DRIVE,
+                    error_type=ErrorType.NVME_ERR,
+                )
+            except TestStepError as e:
+                if ns_detached:
+                    FDPUtils.create_namespace(
+                        host, device, nvmcap, cntlid, nsid, wait_for_ns_ready
+                    )
+                raise e
 
-            AutovalUtils.validate_condition(
-                NVMeUtils.get_fdp_status(host, device),
-                f"{device}: Confirm FDP is Enabled",
-                component=COMPONENT.STORAGE_DRIVE,
-                error_type=ErrorType.NVME_ERR,
-            )
-
-            nvmcap = int(int(tnvmcap) / 4096)
-            nsid = nsid_values[0] if nsid_values else 1
-            current_lbaf_details = NvmeResizeUtil.get_lbaf_details(host, device)
-            flbas_flag = current_lbaf_details["lbaf"]
-            block_size = 4096
-
-            NvmeResizeUtil.create_attach_ns(
-                host,
-                device,
-                nsize=nvmcap,
-                ncap=nvmcap,
-                flbas_flag=flbas_flag,
-                nsid=nsid,
-                cntlid=cntlid,
-                block_size=block_size,
+            FDPUtils.create_namespace(
+                host, device, nvmcap, cntlid, nsid, wait_for_ns_ready
             )
 
             namespace = f"{device}n{nsid}"
@@ -259,7 +311,9 @@ class FDPUtils:
             )
 
     @staticmethod
-    def fdp_cleanup(host: Host, nvme_id_ctrls: Dict[str, Any]) -> None:
+    def fdp_cleanup(
+        host: Host, nvme_id_ctrls: dict[str, Any], wait_for_ns_ready: bool = False
+    ) -> None:
         """
         Cleans up the FDP (Flash Data Path) setup for NVMe drives by detaching and deleting namespaces and disabling FDP.
 
@@ -289,12 +343,14 @@ class FDPUtils:
                 f"{device}: Disable FDP",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.NVME_ERR,
+                raise_on_fail=False,
             )
             AutovalUtils.validate_condition(
                 not NVMeUtils.get_fdp_status(host, device),
                 f"{device}: Confirm FDP is Disabled",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.NVME_ERR,
+                raise_on_fail=False,
             )
 
             try:
@@ -319,4 +375,5 @@ class FDPUtils:
                 flbas_flag=flbas_flag,
                 nsid=nsid,
                 cntlid=cntlid,
+                wait_for_ns_ready=wait_for_ns_ready,
             )

@@ -2,12 +2,17 @@
 
 # pyre-unsafe
 """Drive Integrity test validates data integrity using fio jobs."""
+
+import hashlib
+
 # TestCase IDs    : USSDT_006,USSDT_007, USSDT_008
 import os
 import random
 import re
 import time
-from typing import Dict, List, Union
+from queue import Queue
+from threading import Event
+from typing import Dict, List, Tuple, Union
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.test_base import TestStatus
@@ -19,8 +24,12 @@ from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval.lib.utils.file_actions import FileActions
 from autoval.lib.utils.site_utils import SiteUtils
 from autoval_ssd.lib.utils.disk_utils import DiskUtils
+from autoval_ssd.lib.utils.drive_monitor_utils import DriveMonitorUtils
 from autoval_ssd.lib.utils.fio_runner import FioRunner
 from autoval_ssd.lib.utils.md_utils import MDUtils
+from autoval_ssd.lib.utils.storage.boot_drive_partition_utils import (
+    BootDrivePartitionUtils,
+)
 from autoval_ssd.lib.utils.storage.drive import Drive
 from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
 
@@ -33,7 +42,7 @@ FIO_JOB = [
     "direct=1",
     "group_reporting=1",
     "numjobs=1",
-    "ioengine=libaio",
+    "ioengine=io_uring",
 ]
 
 DRIVE_FILL_FIO_JOB = [
@@ -42,14 +51,8 @@ DRIVE_FILL_FIO_JOB = [
     "direct=1",
     "group_reporting=1",
     "numjobs=1",
-    "ioengine=libaio",
+    "ioengine=io_uring",
     "rw=write",
-    "verify=md5",
-    "verify_backlog=10000000",
-    "verify_state_save=1",
-    "verify_async=4",
-    "verify_fatal=1",
-    "verify_dump=1",
 ]
 RUNTIME = 150
 
@@ -83,6 +86,10 @@ class DriveDataIntegrityTest(StorageTestBase):
             String drive_type: hdd, ssd, etc.
             List drives: list of drives to test: e.g. sdac, sdf,
             Int precondition_drive_fill_percent: drive fill percent before test
+            use_fsyc: Enable/disable use of fsync instead of fdatasync
+                      Purpose: Use fsync instead of fdatasync to ensure data persistence
+                      during system crashes or power loss, especially when testing BTRFS
+                      data flushing.
         """
         super().__init__(*args, **kwargs)
         self.cycle_count = self.test_control["cycle_count"]
@@ -110,11 +117,25 @@ class DriveDataIntegrityTest(StorageTestBase):
         self.ipv6 = None
         self.fiolog_dir = None
         self.power_cmd = None
+        self.power_trigger_prefix = self.test_control.get("power_trigger_prefix", "")
         self.trigger_timeout = 60
         self.status_interval = self.test_control.get("status_interval", 1)
         self.stop_fio_process_check = False
-        self.control_server_logs = SiteUtils.get_control_server_logdir()
-        self.fiolog_server_dir = None
+        self.fio_process_queue: List[Tuple[AutovalThread, Queue]] = []
+        self.use_fsync: bool = self.test_control.get("use_fsync", False)
+        self.skip_direct: bool = self.test_control.get("skip_direct", False)
+        self.enable_periodic_drive_monitor = self.test_control.get(
+            "enable_periodic_drive_monitor", False
+        )
+        self.end_of_test = None
+        self.enable_sel_log_collection = self.test_control.get(
+            "enable_sel_log_collection", False
+        )
+        self.randseed = self.test_control.get("randseed", True)
+        self.boot_drive_partitioned: bool = False
+        self.create_boot_drive_partition: bool = self.test_control.get(
+            "create_boot_drive_partition", True
+        )
 
     def setup(self, *args, **kwargs) -> None:
         """Prerequisite for drive data integrity test.
@@ -151,14 +172,35 @@ class DriveDataIntegrityTest(StorageTestBase):
                     error_type=ErrorType.TEST_TOPOLOGY_ERR,
                 )
         self.check_supported_fio_version()
+        self._get_log_dir()
         if self.remote_fio:
-            self._get_server_log_dir()
             self.ip4 = self._is_hostname_ip4()
             self.ipv6 = self.get_ipv6_addr()
-        else:
-            self._get_log_dir()
-
         self.power_cmd = self._fio_trigger_cmd()
+
+        if (
+            any(str(d) == self.boot_drive for d in self.test_drives)
+            and self.create_boot_drive_partition
+        ):
+            self.boot_drive_partitioned = BootDrivePartitionUtils.create_fio_partition(
+                self.host,
+                self.boot_drive,
+            )
+
+        if self.enable_periodic_drive_monitor:
+            self.interval = self.test_control.get(
+                "periodic_drive_monitor_interval", None
+            )
+            only_sideband_cmds = self.test_control.get("only_sideband_cmds", False)
+            self.end_of_test = Event()
+            self.monitor_thread = AutovalThread.start_autoval_thread(
+                DriveMonitorUtils.start_periodic_drive_monitor,
+                host=self.host,
+                test_drives=self.test_drives,
+                end_of_test=self.end_of_test,
+                periodic_drive_monitor_interval=self.interval,
+                only_sideband_cmds=only_sideband_cmds,
+            )
 
     def check_same_sled_hosts(self) -> int:
         """Check if DUTs from same sled"""
@@ -177,6 +219,7 @@ class DriveDataIntegrityTest(StorageTestBase):
             Returns true when Ipv4_re matches with the hostname.
         """
         ipv4_re = r"\b(?:\d{1,3}\.){3}\d{1,3}\b"
+        # pyrefly: ignore [missing-attribute]
         return re.match(ipv4_re, self.host.hostname) is not None
 
     def _get_log_dir(self) -> None:
@@ -189,16 +232,6 @@ class DriveDataIntegrityTest(StorageTestBase):
         )
         if not FileActions.exists(self.fiolog_dir, self.host):
             FileActions.mkdirs(self.fiolog_dir, self.host)
-
-    def _get_server_log_dir(self) -> None:
-        """
-        This method sets up the directory for storing FIO log files on the control server.
-        It creates a directory named `fio_results` in the `control_server_logs` directory
-        if it does not already exist.
-        """
-        self.fiolog_server_dir = os.path.join(self.control_server_logs, "fio_results")
-        if not FileActions.exists(self.fiolog_server_dir, self.host.localhost):
-            FileActions.mkdirs(self.fiolog_server_dir, self.host.localhost)
 
     def execute(self) -> None:
         """Executes FIO jobs on the given hosts.
@@ -227,6 +260,8 @@ class DriveDataIntegrityTest(StorageTestBase):
                 test_drives = self.test_drives.copy()
             self.save_drive_logs_async(test_drives)
             self.fio_test(test_drives, i)
+            if self.enable_sel_log_collection:
+                self.collect_sel_logs(i)
             self.validate_condition(
                 True,
                 "Verify Flash Integrity for Cycle - %s" % i,
@@ -248,8 +283,14 @@ class DriveDataIntegrityTest(StorageTestBase):
         self.test_size = self.precondition_drive_fill_percent
         self.log_info("Cycle %s - Write in progress" % cycle)
         self.run_fio(
-            DRIVE_FILL_FIO_JOB, self.test_drives, "write", cycle, power_trigger=False
+            DRIVE_FILL_FIO_JOB,
+            # pyrefly: ignore [bad-argument-type]
+            self.test_drives,
+            "write",
+            cycle,
+            power_trigger=False,
         )
+
         self.precondition_drive_fill_percent = None
 
     def get_ipv6_addr(self) -> str:
@@ -260,46 +301,18 @@ class DriveDataIntegrityTest(StorageTestBase):
         ip_addr : str
             ipv6 addr is returned
         """
-        ip_addr = self.get_ip(ip_type="inet6")
-        return ip_addr
-
-    def get_ip(self, ip_type: str = "inet", interface: str = "eth0"):
-        """
-        Return IP for selected interface
-        ip_type can be inet or inet6
-        """
-        # ip_type can be inet or inet6
-        out = self.host.run("ip addr show %s" % interface)
-        if ip_type == "inet":
-            match = re.search(r"%s (\S+)\/.*" % ip_type, out)
-            if match:
-                ip = match.group(1)
-                AutovalLog.log_debug(
-                    f"IP of {self.host.hostname} with {interface}: %s" % ip
-                )
-                return ip
-            raise TestError("Did not find IP type %s in %s" % (ip_type, out))
-        if ip_type == "inet6":
-            pattern = re.compile(
-                r"inet6\s+([a-z0-9:]+).*(?:scope global)",
-                re.MULTILINE,
+        try:
+            # pyrefly: ignore [missing-attribute]
+            ip_addr = self.host.inband.get_ip(ip_type="inet6")
+        except Exception:
+            # pyrefly: ignore [missing-attribute]
+            ip_addr = self.host.inband.get_ip(
+                ip_type="inet6",
+                # pyrefly: ignore [missing-attribute]
+                interface=self.host.oob.nic_interface,
             )
-            match = pattern.search(out)
-            if match:
-                ip = match.group(1)
-                AutovalLog.log_debug(
-                    f"IP of {self.host.hostname} with {interface} is: {ip}"
-                )
-                return ip
-            else:
-                ip = self.get_link_local_ip_rdma(interface, out)
-                if ip:
-                    AutovalLog.log_debug(
-                        f"IP of {self.host.hostname} with {interface} is: {ip}"
-                    )
-                    return ip
-            raise TestError("Did not find IP type %s in %s" % (ip_type, out))
-        raise TestError("Unknown IP type %s" % ip_type)
+
+        return ip_addr
 
     def fio_test(self, test_drives, cycle) -> None:
         """Runs FIO tests on the given hosts.
@@ -361,7 +374,7 @@ class DriveDataIntegrityTest(StorageTestBase):
         # Since power loss module not available in boot drive,
         # we will get error like bad header while executing fio verify.
         # Hence, fio verify only for data drives.
-        # More info available in T86898653.
+
         if test_drives:
             # read with verify
             self.start_fio_monitor()
@@ -389,16 +402,17 @@ class DriveDataIntegrityTest(StorageTestBase):
         fio_stopped_running = False
         while not self.stop_fio_process_check:
             time.sleep(5)
+            # pyrefly: ignore [missing-attribute]
             out = self.host.run(cmd=cmd)
             fio_is_running = "fio_" in out
             AutovalLog.log_as_cmd(
                 f"FIO process is {'' if fio_is_running else 'not'} running"
             )
             if not fio_started_running and fio_is_running:
-                AutovalLog.log_info("FIO started running")
+                AutovalLog.log_info("FIO started running, its process is there")
                 fio_started_running = True
-            if fio_started_running and not fio_is_running:
-                AutovalLog.log_info("WARNING:  FIO stopped running")
+            if fio_started_running and not fio_is_running and not fio_stopped_running:
+                AutovalLog.log_info("FIO finished running, its process is gone")
                 fio_stopped_running = True
             if fio_stopped_running and fio_is_running:
                 AutovalLog.log_info(
@@ -415,7 +429,6 @@ class DriveDataIntegrityTest(StorageTestBase):
         Returns:
             None
         """
-        self.fio_process_queue = []
         self.stop_fio_process_check = False
         self.fio_process_queue.append(
             AutovalThread.start_autoval_thread(
@@ -435,19 +448,24 @@ class DriveDataIntegrityTest(StorageTestBase):
         """
         self.stop_fio_process_check = True
         if len(self.fio_process_queue):
-            AutovalLog.log_info("INSIDE STOP_FIO_CHECK")
             AutovalThread.wait_for_autoval_thread(self.fio_process_queue)
+            # Reset so the next start/stop cycle does not re-wait on threads
+            # that have already been joined (queue is reused across cycles).
+            self.fio_process_queue = []
 
     def cleanup_test_file(self, force_delete: bool = False) -> None:
         """Cleanup test file and cache"""
         # Delete test file
+        # pyrefly: ignore [missing-attribute]
         self.host.run(cmd="rm -f /root/fio_file", ignore_status=True)  # noqa
         # Delete state files
         if self.test_status == TestStatus.PASSED or force_delete:
             cmd = "rm -f *state"
+            # pyrefly: ignore [missing-attribute]
             self.host.run(
                 cmd=cmd, working_directory=self.fiolog_dir, ignore_status=True
             )
+        # pyrefly: ignore [missing-attribute]
         self.host.clear_cache()
 
     def write_io(self, test_drives, cycle) -> None:
@@ -564,18 +582,12 @@ class DriveDataIntegrityTest(StorageTestBase):
         power_trigger : Boolean
             If True fio will run with trigger. Here the default value is False.
         """
+        # pyrefly: ignore [unsupported-operation]
+        fio_output_file = self.fiolog_dir + "/fio-cycle_%s_%s.log" % (cycle, name)
         di_job = self.create_fio_job(job_args, test_drives, name, cycle)
         if self.remote_fio:
-            fio_output_file = (
-                f"{self.fiolog_server_dir}/fio-cycle_{cycle}_{name}.log".format(
-                    cycle, name
-                )
-            )
             self._run_fio_remote(di_job, fio_output_file, power_trigger=power_trigger)
         else:
-            fio_output_file = f"{self.fiolog_dir}/fio-cycle_{cycle}_{name}.log".format(
-                cycle, name
-            )
             self._run_fio_local(di_job, fio_output_file, power_trigger=power_trigger)
 
     def _run_fio_cmd(self, cmd: str, timeout: int, power_trigger: bool) -> None:
@@ -591,6 +603,8 @@ class DriveDataIntegrityTest(StorageTestBase):
             None
         """
         self.log_info(f"Running command: {cmd}")
+        self.log_info("Fio command is executing.....")
+        # pyrefly: ignore [missing-attribute]
         self.host.run(cmd=cmd, working_directory=self.fiolog_dir, timeout=timeout)
 
     def _run_fio_local(
@@ -607,7 +621,7 @@ class DriveDataIntegrityTest(StorageTestBase):
         Raises:
             TimeoutError: When fails to collect output in FIO output file.
         """
-        cmd_timeout = 1200
+        cmd_timeout = 1200 + self.trigger_timeout
         if self.precondition_drive_fill_percent:
             cmd_timeout = self.drive_fill_timeout
         check_parse_fio_error = False
@@ -615,18 +629,12 @@ class DriveDataIntegrityTest(StorageTestBase):
         current_reboot = ""
         cmd = "fio %s --output-format=json --output=%s" % (di_job, fio_output_file)
         if power_trigger:
+            # pyrefly: ignore [missing-attribute]
             current_reboot = self.host.get_last_reboot()
             cmd += f" --status-interval={self.status_interval}"
             cmd += f" --trigger-timeout={self.trigger_timeout} {self.power_cmd}"
-            AutovalLog.log_info(
-                f"Power trigger enabled and current reboot is {current_reboot}"
-            )
         try:
             self._run_fio_cmd(cmd, cmd_timeout, power_trigger)
-            time.sleep(30)
-            out = self.host.bmc.power_status().upper()
-            if "OFF" in out:
-                self.host.bmc.power_on()
         except Exception as exc:
             valid_exceptions = [
                 "timed out",
@@ -643,27 +651,30 @@ class DriveDataIntegrityTest(StorageTestBase):
                     AutovalLog.log_as_cmd(cmd)
                     AutovalLog.log_info(str(exc))
                     if power_trigger:
-                        _msg = "Fio was likely interrupted due to power trigger"
+                        _msg = "fio was likely interrupted due to power trigger"
                         self.log_info(_msg)
                     try:
-                        self.host.bmc.bmc_host.wait_for_reconnect(False, timeout=180)
+                        # pyrefly: ignore [missing-attribute]
+                        self.host.oob.bmc.bmc_host.wait_for_reconnect(
+                            False, timeout=360
+                        )
                     except Exception as e:
                         AutovalLog.log_info(
                             f"When trying to reconnect to BMC we got this error : {str(e)}"
                         )
                         time.sleep(30)
-                    out = self.host.bmc.power_status().upper()
-                    if "OFF" in out:
-                        self.host.bmc.power_on()
                     check_parse_fio_error = True
             if not check_parse_fio_error:
                 AutovalLog.log_info(str(exc))
                 if power_trigger:
+                    # pyrefly: ignore [missing-attribute]
                     self.host.reconnect(timeout=2400)
-                    self.host.check_system_health()
+                    # pyrefly: ignore [missing-attribute]
+                    self.host.system_health_check(current_reboot, 2400)
                 raise TestError(str(exc), error_type=ErrorType.DRIVE_ERR)
         if power_trigger:
-            self.host.check_system_health()
+            # pyrefly: ignore [missing-attribute]
+            self.host.system_health_check(current_reboot, 2400)
         if check_parse_fio_error:
             AutovalLog.log_info("check_parse_fio_error running...")
             self.parse_fio_error(1, _msg, fio_output_file)
@@ -688,20 +699,21 @@ class DriveDataIntegrityTest(StorageTestBase):
             fio_output_file,
         )
         if power_trigger:
+            # pyrefly: ignore [missing-attribute]
             current_reboot = self.host.get_last_reboot()
             cmd += f" --status-interval={self.status_interval}"
             cmd += f" --trigger-timeout={self.trigger_timeout} {self.power_cmd}"
-            AutovalLog.log_info(
-                f"Power trigger enabled and current reboot is {current_reboot}"
-            )
+        self.log_info(f"Running command: {cmd}")
+        # pyrefly: ignore [missing-attribute]
         ret = self.host.localhost.run_get_result(
             cmd=cmd,
-            working_directory=self.fiolog_server_dir,
+            working_directory=self.fiolog_dir,
         )
         if ret.return_code != 0:
             self.parse_fio_error(ret.return_code, ret.stdout, fio_output_file)
         if power_trigger:
-            self.host.check_system_health()
+            # pyre-fixme[61]: `current_reboot` is undefined, or not always defined.
+            self.host.system_health_check(current_reboot, 2400)
 
     def check_drives_presence(self) -> None:
         """Verifies the drives presence.
@@ -738,7 +750,7 @@ class DriveDataIntegrityTest(StorageTestBase):
         return cfg_filter
 
     def create_job_content(
-        self, dev_str: str, device, index, options=None, job=None
+        self, dev_str: str, device: Drive, index: int, options=None, job=None
     ) -> str:
         """Creates content for each job in job file for FIO run.
 
@@ -747,23 +759,24 @@ class DriveDataIntegrityTest(StorageTestBase):
 
         Parameters
         ----------
-        dev_str    : String
-           Contains fio file content for global, other jobs would to added
-        device     : String
-           drive for which the job would be created
-        index      :  Integer
-           Fio file name.
-        options    : List
-           device options
-        job        : String
-           fio job
+            dev_str: Contains fio file content for global, other jobs would to added
+            device: Drive for which the job would be created
+            index: Fio Job index.
+            options: device options
+            job: fio job name
 
         Returns
         -------
-        dev_str   : String
-           Returns the fio content for each job.
+            dev_str: Returns the fio content for each job.
         """
-        job_name = "trim" if job == "trim" else "job"
+        fio_device = f"/dev/{device}"
+        if str(device) == self.boot_drive and self.boot_drive_partitioned:
+            fio_device = BootDrivePartitionUtils.get_fio_partition(
+                self.host,
+                self.boot_drive,
+            )
+
+        job_name = f"{'trim' if job == 'trim' else 'job'}{index}"
         # if selected io size 100%, then there is no space to run trim option
         # hence, skipping fio trim
         if job == "trim" and self.test_size == 100:
@@ -771,48 +784,179 @@ class DriveDataIntegrityTest(StorageTestBase):
                 f"Since, drive {device} total size used for fio write operation, can't do trim"
             )
             return dev_str
-        dev_str += "[%s%d]\n" % (job_name, index)
-        if str(device) == str(self.boot_drive):
-            if job == "write":
-                dev_str += "rw=randwrite\n"
-            if job == "trim":
-                dev_str += "rw=randtrim\n"
-                dev_str += "offset=20%\n"
-            if DiskUtils.is_drive_mounted(self.host, str(self.boot_drive)):
-                dev_str += "filename=/root/fio_file\n"
-            else:
-                dev_str += "filename=/dev/%s\n" % str(device)
-            # fio does not support size in %
-            dev_str += "size=60g\n"
-            dev_str += "fdatasync=1\n"
+
+        # Create dictionary for job parameters
+        job_params = {}
+
+        if str(device) == str(self.boot_drive) and not self.boot_drive_partitioned:
+            # pyrefly: ignore [bad-argument-type]
+            job_params = self._add_boot_drive_params(job_params, device, job)
         else:
-            remaining_size = self.test_size
-            if job == "write":
-                dev_str += "rw=randwrite\n"
-            if job == "trim":
-                dev_str += "rw=randtrim\n"
-                # trim need to start from end of write job allocated size.
-                # otherwise, write, trim is going to use same memory
-                # and will fail with bad magic header.
-                dev_str += f"offset={self.test_size}%\n"
-                remaining_size = 100 - self.test_size
-            dev_str += "filename=/dev/%s\n" % str(device)
-            dev_str += f"size={remaining_size}%\n"
-        if options:
-            for option in options:
-                dev_str += "%s\n" % option
-        dev_str += "new_group=1\n"
+            job_params = self._add_data_drive_params(
+                job_params,
+                device,
+                fio_device,
+                # pyrefly: ignore [bad-argument-type]
+                job,
+            )
+
+        # pyrefly: ignore [bad-argument-type]
+        job_params = self._add_common_params(job_params, options, device)
+
+        job_params_str = f"[{job_name}]\n"
+        for key, value in job_params.items():
+            job_params_str += f"{key}={value}\n" if value else f"{key}\n"
+
+        dev_str += job_params_str
         return dev_str
 
-    def create_fio_job(self, job_str, drives, name, cycle):
+    def _add_boot_drive_params(
+        self, job_params: dict, device: Drive, job: str
+    ) -> dict[str, str]:
+        """
+        Add parameters for boot drive jobs.
+
+        Args:
+            job_params: Dictionary of job parameters.
+            device: Drive object.
+            job: Job name.
+
+        Returns:
+            Updated dictionary of job parameters.
+        """
+        if job == "write":
+            job_params["rw"] = "randwrite"
+        if job == "trim":
+            job_params["rw"] = "randtrim"
+            job_params["offset"] = "20%"
+        # pyrefly: ignore [bad-argument-type]
+        if DiskUtils.is_drive_mounted(self.host, str(self.boot_drive)):
+            job_params["filename"] = "/root/fio_file"
+        else:
+            job_params["filename"] = f"/dev/{str(device)}"
+        # fio does not support file size in %
+        job_params["size"] = "60g"
+        if self.use_fsync:
+            job_params["fsync"] = "1"
+        else:
+            job_params["fdatasync"] = "1"
+        return job_params
+
+    def _add_data_drive_params(
+        self, job_params: dict, device: Drive, fio_device: str, job: str
+    ) -> dict[str, str]:
+        """
+        Add parameters for data drive jobs.
+
+        Args:
+            job_params: Dictionary of job parameters.
+            device: Drive object.
+            fio_device: FIO device path.
+            job: Job name.
+
+        Returns:
+            Updated dictionary of job parameters.
+        """
+        remaining_size = self.test_size
+        if job == "write":
+            job_params["rw"] = "randwrite"
+        if job == "trim":
+            job_params["rw"] = "randtrim"
+            # trim needs to start from end of write job allocated size
+            job_params["offset"] = f"{self.test_size}%"
+            remaining_size = 100 - self.test_size
+
+        job_params["filename"] = fio_device
+
+        job_params["size"] = f"{remaining_size}%"
+
+        if str(device) == str(self.boot_drive):
+            if self.use_fsync:
+                job_params["fsync"] = "1"
+            else:
+                job_params["fdatasync"] = "1"
+
+        return job_params
+
+    def _add_common_params(
+        self, job_params: dict, options: list, device: Drive
+    ) -> dict[str, str]:
+        """
+        Adds common parameters like options and random seed to job parameters.
+
+        Args:
+            job_params: Dictionary of job parameters.
+            options: List of options.
+            device: Drive object.
+
+        Returns:
+            Updated dictionary of job parameters.
+        """
+        if options:
+            for option in options:
+                key, value = option.split("=", 1) if "=" in option else (option, "")
+                job_params[key] = value
+
+        if self.randseed:
+            job_params["randrepeat"] = "1"
+            seed_key = getattr(device, "id_path", None) or device.block_name
+            job_params["randseed"] = (
+                f"{int(hashlib.sha256(seed_key.encode()).hexdigest(), 16) % 1000000}"
+            )
+
+        job_params["new_group"] = "1"
+        return job_params
+
+    def _calculate_job_split_nums(
+        self, job_sizes: List[int], base_split_num: int
+    ) -> List[int]:
+        """
+        Calculate the number of splits for each job based on their proportional sizes.
+
+        Args:
+            job_sizes: List of job sizes (as percentages).
+            base_split_num: Total number of splits to distribute.
+
+        Returns:
+            List of split numbers for each job, ensuring at least one split per non-zero job.
+        """
+        total_size = sum(job_sizes)
+
+        split_nums = []
+        for size in job_sizes:
+            if size == 0:
+                split_nums.append(0)
+            else:
+                proportional_split = round(base_split_num * size / total_size)
+                split_nums.append(max(1, proportional_split))
+
+        current_total = sum(split_nums)
+
+        # Adjust split numbers to ensure total is close to base_split_num
+        if current_total != base_split_num and current_total > 0:
+            max_size_idx = max(
+                range(len(job_sizes)),
+                key=lambda i: job_sizes[i] if split_nums[i] > 1 else 0,
+            )
+            if current_total > base_split_num:
+                adjustment = min(
+                    split_nums[max_size_idx] - 1, current_total - base_split_num
+                )
+                split_nums[max_size_idx] -= adjustment
+            elif current_total < base_split_num:
+                split_nums[max_size_idx] += base_split_num - current_total
+
+        return split_nums
+
+    def create_fio_job(self, job_args_list, drives, name, cycle):
         """Creates job file for FIO run.
 
-        This method creates a job file with the available "job_str" parameters for
+        This method creates a job file with the available "job_args_list" parameters for
         the drives.
 
         Parameters
         ----------
-        job_str    : :obj: 'List' of :obj: 'Strings'
+        job_args_list    : :obj: 'List' of :obj: 'Strings'
            FIO parameters.
         drives     : Dictionary {String,String}
            Drives of specified drive type on the host.
@@ -825,8 +969,15 @@ class DriveDataIntegrityTest(StorageTestBase):
            JobFile name along with location.
         """
         idx = 0
-        dev_str = "[global]\n" + "\n".join(job_str) + "\n"
+        if self.skip_direct:
+            if "direct=1" in job_args_list:
+                job_args_list[job_args_list.index("direct=1")] = "direct=0"
+            else:
+                job_args_list.append("direct=0")
+
+        dev_str = "[global]\n" + "\n".join(job_args_list) + "\n"
         filename = f"seq_io_{name}_cycle_{cycle}.fio"
+
         if isinstance(drives, dict):
             for device, options in drives.items():
                 if name == "write":
@@ -838,11 +989,6 @@ class DriveDataIntegrityTest(StorageTestBase):
                         dev_str, device, idx, options=options
                     )
                 idx += 1
-            # trim job info need to append at the end of fio job file,
-            # otherwise fio write job will fail
-            # create *-verify.state file with different name,
-            # then fio read job will fail with stale file issue
-            # due to different verify.state file.
             for device, options in drives.items():
                 if self.is_trim_needed(name, device):
                     dev_str = self.create_job_content(
@@ -856,24 +1002,19 @@ class DriveDataIntegrityTest(StorageTestBase):
                 else:
                     dev_str = self.create_job_content(dev_str, device, idx)
                 idx += 1
-            # trim job info need to append at the end of fio job file,
-            # otherwise fio write job will fail
-            # create *-verify.state file with different name,
-            # then fio read job will fail with stale file issue
-            # due to different verify.state file.
             for device in drives:
                 if self.is_trim_needed(name, device):
                     dev_str = self.create_job_content(dev_str, device, idx, job="trim")
                     idx += 1
+
+        job_file = os.path.join(self.fiolog_dir, filename)
         if self.remote_fio:
-            job_file = os.path.join(self.fiolog_server_dir, filename)
             FileActions.write_data(job_file, dev_str)
         else:
             # if trigger timeout chosen less than 60sec, then written fio job file data
             # will be unavailable post cycle cmd. Hence, either delay needed to write the
             # data from cache to drive or sync cmd need to execute. Here, I am using sync
             # command in FileActions module write_data method.
-            job_file = os.path.join(self.fiolog_dir, filename)
             FileActions.write_data(job_file, dev_str, host=self.host, sync=True)
         return job_file
 
@@ -902,14 +1043,17 @@ class DriveDataIntegrityTest(StorageTestBase):
 
         This method kills the fio and setup fio server on the host.
         """
+        # pyrefly: ignore [missing-attribute]
         self.host.run("killall fio", ignore_status=True)  # noqa
         # Setup fio server on the host
+        # pyrefly: ignore [missing-attribute]
         self.host.run("rm -f /tmp/fio.pid", ignore_status=True)  # noqa
         cmd = "fio --server=ip%s:%s --daemonize=/tmp/fio.pid" % (
             "" if self.ip4 else "6",
             self.ipv6,
         )
         self.log_info(f"Running command: {cmd}")
+        # pyrefly: ignore [missing-attribute]
         self.host.run(cmd=cmd)  # noqa
 
     def parse_fio_error(self, exit_code, cmd_out, fio_output_file: str) -> None:
@@ -989,9 +1133,11 @@ class DriveDataIntegrityTest(StorageTestBase):
     def check_supported_fio_version(self) -> None:
         """Check supported fio version for the DUT or/and Controller"""
         if self.remote_fio:
+            # pyrefly: ignore [missing-attribute]
             fio_runner = FioRunner(self.host.localhost, self.test_control)
             # Might be fio not installed on the controller.
             # Hence, not required to validate fio ver in remote method disabled case.
+            # pyrefly: ignore [missing-attribute]
             fio_runner.check_fio_version(self.host.localhost)
         fio_runner = FioRunner(self.host, self.test_control)
         fio_runner.check_fio_version(self.host)
@@ -1011,12 +1157,15 @@ class DriveDataIntegrityTest(StorageTestBase):
         OpenBMC.
         """
         AutovalLog.log_info("Starting to clean up drive data integrity test")
+        if self.enable_periodic_drive_monitor and self.end_of_test:
+            self.end_of_test.set()
+            AutovalThread.wait_for_autoval_thread([self.monitor_thread])
         self.stop_fio_monitor()
+
+        if self.boot_drive_partitioned:
+            BootDrivePartitionUtils.cleanup_fio_partition(self.host, self.boot_drive)
         try:
             self.cleanup_test_file()
-            out = self.host.bmc.power_status().upper()
-            if "OFF" in out:
-                self.host.bmc.power_on()
         except Exception as exc:
             AutovalLog.log_info(str(exc))
         finally:
@@ -1044,7 +1193,93 @@ class DriveDataIntegrityTest(StorageTestBase):
         power_cmd : String
             Trigger option which is added to the fio command.
         """
-        power_cmd = self.host.bmc.get_fio_trigger_cmd(
+        # pyrefly: ignore [missing-attribute]
+        power_cmd = self.host.oob.get_fio_trigger_cmd(
             self.cycle_type, remote=self.remote_fio
         )
+        if self.power_trigger_prefix:
+            power_cmd = power_cmd.replace(
+                "--trigger='", f"--trigger='{self.power_trigger_prefix}; "
+            )
         return power_cmd
+
+    def collect_sel_logs(self, cycle_count: int) -> None:
+        """Collects the SEL logs.
+
+        This method collects the SEL logs for the cycle and saves the
+        logs in the result directory.
+
+        """
+        # pyrefly: ignore [missing-attribute]
+        logs = self.host.oob.get_sel_history(self.host.oob.get_slot_info())
+        path = os.path.join(SiteUtils.get_resultsdir(), "system_logs")
+        dest_path = os.path.join(path, f"sel_log_cycle_{cycle_count}.log")
+        FileActions.write_data(path=dest_path, contents=logs)
+        AutovalLog.log_info("SEL logs saved in manifold")
+        # pyrefly: ignore [missing-attribute]
+        self.host.oob.sel_clear()
+
+    def split_fio_job(
+        self, job_config: dict[str, str], job_name: str, num_jobs: int
+    ) -> str:
+        """
+        Split a fio job into multiple jobs with offset and size parameters.
+
+        Args:
+            job_config: The fio job configuration as a dict
+            job_name: The name of the job to split
+            num_jobs: Number of jobs to split into.
+
+        Returns:
+            str: The new fio configuration with split jobs.
+        """
+        base_job_name = job_name
+
+        size_str = job_config.get("size", "100%")
+        if not size_str.endswith("%"):
+            raise TestError(
+                "Size must be specified as a percentage",
+                component=COMPONENT.TEST,
+                error_type=ErrorType.INPUT_ERR,
+            )
+
+        total_size = int(size_str.rstrip("%"))
+
+        offset_str = job_config.get("offset", "0%")
+        if not offset_str.endswith("%"):
+            raise TestError(
+                "Offset must be specified as a percentage",
+                component=COMPONENT.TEST,
+                error_type=ErrorType.INPUT_ERR,
+            )
+        initial_offset = int(offset_str.rstrip("%"))
+
+        size_per_job = total_size // num_jobs
+        remainder = total_size % num_jobs
+
+        if size_per_job == 0:
+            raise TestError(
+                "Size per job too small for the number of jobs",
+                component=COMPONENT.TEST,
+                error_type=ErrorType.INPUT_ERR,
+            )
+
+        new_jobs = []
+        current_offset = initial_offset
+        for i in range(num_jobs):
+            # Distribute remainder by adding 1 to size for first 'remainder' jobs
+            job_size = size_per_job + (1 if i < remainder else 0)
+
+            job_lines = [f"\n[{base_job_name}_{i}]"]
+            for key, value in job_config.items():
+                if key != "size" and key != "offset":
+                    job_lines.append(f"{key}={value}")
+
+            job_lines.append("iodepth=1")
+            job_lines.append(f"size={job_size}%")
+            job_lines.append(f"offset={current_offset}%")
+
+            new_jobs.append("\n".join(job_lines))
+            current_offset += job_size
+
+        return "\n".join(new_jobs)

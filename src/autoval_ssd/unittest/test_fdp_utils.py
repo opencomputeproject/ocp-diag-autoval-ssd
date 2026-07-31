@@ -2,7 +2,6 @@
 
 # pyre-unsafe
 import unittest
-
 from unittest import mock
 
 from autoval.lib.host.component.component import COMPONENT
@@ -10,7 +9,6 @@ from autoval.lib.utils.autoval_errors import ErrorType
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval_ssd.lib.utils.storage.nvme.fdp_utils import FDPUtils
 from autoval_ssd.lib.utils.storage.nvme.nvme_resize_utils import NvmeResizeUtil
-
 from autoval_ssd.lib.utils.storage.nvme.nvme_utils import NVMeUtils
 from autoval_ssd.unittest.mock.lib.mock_host import MockHost
 
@@ -26,14 +24,18 @@ class FDPUtilsUnitTest(unittest.TestCase):
 
     @mock.patch.object(AutovalUtils, "validate_condition")
     @mock.patch.object(AutovalUtils, "validate_empty_list")
-    @mock.patch.object(AutovalUtils, "validate_not_equal")
-    @mock.patch.object(NVMeUtils, "get_nvme_version", return_value="2.9.0")
+    @mock.patch.object(FDPUtils, "validate_fdp_config", return_value=[])
     @mock.patch.object(FDPUtils, "get_fdp_config")
+    @mock.patch.object(FDPUtils, "get_fdp_unsupported_drives", return_value=[])
+    @mock.patch.object(FDPUtils, "validate_nvme_version", return_value=False)
+    @mock.patch.object(NVMeUtils, "get_nvme_version", return_value="2.10.2")
     def test_validate_fdp_support_successful(
         self,
-        mock_get_fdp_config,
         mock_get_nvme_version,
-        mock_validate_not_equal,
+        mock_validate_nvme_version,
+        mock_get_unsupported,
+        mock_get_fdp_config,
+        mock_validate_fdp_config,
         mock_validate_empty_list,
         mock_validate_condition,
     ):
@@ -48,28 +50,12 @@ class FDPUtilsUnitTest(unittest.TestCase):
             "reclaim_groups": 1,
             "reclaim_unit_handles": 8,
             "namespaces_supported": 3,
-            "reclaim_unit_handle_list": [
-                "[0]: Initially Isolated",
-                "[1]: Initially Isolated",
-                "[2]: Initially Isolated",
-                "[3]: Initially Isolated",
-                "[4]: Initially Isolated",
-                "[5]: Initially Isolated",
-                "[6]: Initially Isolated",
-                "[7]: Initially Isolated",
-            ],
         }
 
-        FDPUtils.validate_fdp_support(self.host, nvme_id_ctrls)
-        mock_validate_not_equal.assert_any_call(
-            0x80290 & (1 << 19),
-            0,
-            "nvme1: Supports FDP",
-            component=COMPONENT.STORAGE_DRIVE,
-            error_type=ErrorType.NVME_ERR,
-            log_on_pass=True,
-        )
-
+        # pyrefly: ignore [bad-argument-type]
+        result = FDPUtils.validate_fdp_support(self.host, nvme_id_ctrls)
+        self.assertTrue(result)
+        mock_get_unsupported.assert_called_once()
         mock_validate_empty_list.assert_any_call(
             [],
             "nvme1: FDP Config Validation Errors",
@@ -79,14 +65,18 @@ class FDPUtilsUnitTest(unittest.TestCase):
 
     @mock.patch.object(AutovalUtils, "validate_condition")
     @mock.patch.object(AutovalUtils, "validate_empty_list")
-    @mock.patch.object(AutovalUtils, "validate_not_equal")
-    @mock.patch.object(NVMeUtils, "get_nvme_version", return_value="2.9.0")
+    @mock.patch.object(FDPUtils, "validate_fdp_config")
     @mock.patch.object(FDPUtils, "get_fdp_config")
+    @mock.patch.object(FDPUtils, "get_fdp_unsupported_drives", return_value=[])
+    @mock.patch.object(FDPUtils, "validate_nvme_version", return_value=False)
+    @mock.patch.object(NVMeUtils, "get_nvme_version", return_value="2.10.2")
     def test_validate_fdp_support_config_validation_failed(
         self,
-        mock_get_fdp_config,
         mock_get_nvme_version,
-        mock_validate_not_equal,
+        mock_validate_nvme_version,
+        mock_get_unsupported,
+        mock_get_fdp_config,
+        mock_validate_fdp_config,
         mock_validate_empty_list,
         mock_validate_condition,
     ):
@@ -101,18 +91,12 @@ class FDPUtilsUnitTest(unittest.TestCase):
             "reclaim_groups": 1,
             "reclaim_unit_handles": 8,
             "namespaces_supported": 1,
-            "reclaim_unit_handle_list": [
-                "[0]: Initially Isolated",
-                "[1]: Initially Isolated",
-                "[2]: Initially Isolated",
-                "[3]: Initially Isolated",
-                "[4]: Initially Isolated",
-                "[5]: Initially Isolated",
-                "[6]: Initially Isolated",
-                "[7]: Initially Isolated",
-            ],
         }
+        mock_validate_fdp_config.return_value = [
+            "namespaces_supported mismatch: Actual value: 1 is less than Expected minimum: 2",
+        ]
 
+        # pyrefly: ignore [bad-argument-type]
         FDPUtils.validate_fdp_support(self.host, nvme_id_ctrls)
         mock_validate_empty_list.assert_any_call(
             [
@@ -123,33 +107,28 @@ class FDPUtilsUnitTest(unittest.TestCase):
             error_type=ErrorType.NVME_ERR,
         )
 
-    @mock.patch.object(AutovalUtils, "validate_condition")
     @mock.patch.object(AutovalUtils, "validate_empty_list")
-    @mock.patch.object(AutovalUtils, "validate_not_equal")
-    @mock.patch.object(FDPUtils, "validate_fdp_config")
-    @mock.patch.object(NVMeUtils, "get_nvme_version", return_value="1.11.2")
+    @mock.patch.object(AutovalUtils, "validate_condition")
+    @mock.patch.object(FDPUtils, "get_fdp_unsupported_drives", return_value=["nvme2"])
+    @mock.patch.object(FDPUtils, "validate_nvme_version", return_value=False)
+    @mock.patch.object(NVMeUtils, "get_nvme_version", return_value="2.10.2")
     def test_validate_fdp_support_low_version(
         self,
         mock_get_nvme_version,
-        mock_validate_fdp_config,
-        mock_validate_not_equal,
-        mock_validate_empty_list,
+        mock_validate_nvme_version,
+        mock_get_unsupported,
         mock_validate_condition,
+        mock_validate_empty_list,
     ):
         """
-        Test case: NVMe version is lower than required (2.9)
+        Test case: Drive does not support FDP (unsupported drives returned)
         """
         nvme_id_ctrls = {
             "nvme2": {"ctratt": 0x290},  # 19th bit set to 0
         }
-        FDPUtils.validate_fdp_support(self.host, nvme_id_ctrls)
-        mock_validate_condition.assert_called_once_with(
-            False,
-            "NVMe version 2.10 or higher required for FDP validation",
-            component=COMPONENT.STORAGE_DRIVE,
-            error_type=ErrorType.NVME_ERR,
-            log_on_pass=True,
-        )
+        # pyrefly: ignore [bad-argument-type]
+        result = FDPUtils.validate_fdp_support(self.host, nvme_id_ctrls)
+        self.assertFalse(result)
 
     def test_get_fdp_config(self):
         """
@@ -188,6 +167,7 @@ class FDPUtilsUnitTest(unittest.TestCase):
             ],
         }
 
+        # pyrefly: ignore [bad-argument-type]
         result = FDPUtils.get_fdp_config(self.host, device)
         self.assertEqual(result, expected_result)
 
@@ -242,24 +222,24 @@ class FDPUtilsUnitTest(unittest.TestCase):
         errors = FDPUtils.validate_fdp_config(mismatched_output, self.fdp_config)
         self.assertEqual(errors, expected_errors)
 
-    @mock.patch.object(NvmeResizeUtil, "create_attach_ns")
-    @mock.patch.object(NvmeResizeUtil, "get_lbaf_details")
+    @mock.patch.object(FDPUtils, "create_namespace")
     @mock.patch.object(NvmeResizeUtil, "detach_delete_ns")
     @mock.patch.object(NvmeResizeUtil, "get_nsid_list")
     @mock.patch.object(NvmeResizeUtil, "get_lbaf_to_flbas_map")
     @mock.patch.object(AutovalUtils, "validate_no_exception")
+    @mock.patch.object(AutovalUtils, "validate_condition")
     @mock.patch.object(NVMeUtils, "get_fdp_status")
     @mock.patch.object(NVMeUtils, "set_fdp")
     def test_fdp_setup(
         self,
         mock_set_fdp,
         mock_get_fdp_status,
+        mock_validate_condition,
         mock_validate_no_exception,
         mock_get_lbaf_to_flbas_map,
         mock_get_nsid_list,
         mock_detach_delete_ns,
-        mock_get_lbaf_details,
-        mock_create_attach_ns,
+        mock_create_namespace,
     ):
         """
         Test the successful setup of FDP for one NVMe drive.
@@ -271,9 +251,9 @@ class FDPUtilsUnitTest(unittest.TestCase):
         mock_get_nsid_list.return_value = ["1"]
         mock_set_fdp.return_value = True
         mock_get_fdp_status.return_value = True
-        mock_get_lbaf_details.return_value = {"lbaf": 0}
         mock_get_lbaf_to_flbas_map.return_value = {"512": 2, "4096": 0, "4096+64": 1}
 
+        # pyrefly: ignore [bad-argument-type]
         FDPUtils.fdp_setup(self.host, nvme_id_ctrls)
 
         mock_detach_delete_ns.assert_called_once_with(self.host, "/dev/nvme0", 1, ["1"])
@@ -281,15 +261,13 @@ class FDPUtilsUnitTest(unittest.TestCase):
         mock_set_fdp.assert_called_once_with(self.host, "/dev/nvme0", enable=True)
         mock_get_fdp_status.assert_called_once_with(self.host, "/dev/nvme0")
 
-        mock_create_attach_ns.assert_called_once_with(
+        mock_create_namespace.assert_called_once_with(
             self.host,
             "/dev/nvme0",
-            nsize=1000,
-            ncap=1000,
-            block_size=4096,
-            flbas_flag=0,
-            nsid="1",
-            cntlid=1,
+            1000,
+            1,
+            "1",
+            False,
         )
 
         mock_validate_no_exception.assert_any_call(
@@ -331,6 +309,7 @@ class FDPUtilsUnitTest(unittest.TestCase):
         mock_set_fdp.return_value = True
         mock_get_fdp_status.return_value = False
 
+        # pyrefly: ignore [bad-argument-type]
         FDPUtils.fdp_cleanup(self.host, nvme_id_ctrls)
 
         mock_detach_delete_ns.assert_called_once_with(self.host, "/dev/nvme0", 1, ["1"])
@@ -341,12 +320,14 @@ class FDPUtilsUnitTest(unittest.TestCase):
             "/dev/nvme0: Disable FDP",
             component=COMPONENT.STORAGE_DRIVE,
             error_type=ErrorType.NVME_ERR,
+            raise_on_fail=False,
         )
         mock_validate_condition.assert_any_call(
             True,
             "/dev/nvme0: Confirm FDP is Disabled",
             component=COMPONENT.STORAGE_DRIVE,
             error_type=ErrorType.NVME_ERR,
+            raise_on_fail=False,
         )
         mock_create_attach_ns.assert_called_once_with(
             self.host,
@@ -356,4 +337,5 @@ class FDPUtilsUnitTest(unittest.TestCase):
             flbas_flag=0,
             nsid="1",
             cntlid=1,
+            wait_for_ns_ready=False,
         )

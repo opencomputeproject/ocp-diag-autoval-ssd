@@ -2,7 +2,6 @@
 
 # pyre-unsafe
 import re
-from typing import Dict, Optional, Tuple
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.utils.autoval_errors import ErrorType
@@ -13,9 +12,9 @@ from autoval.lib.utils.autoval_utils import AutovalUtils
 
 def compare_drive_data(
     drive_serial_no: str,
-    validate_config: Dict,
-    smart_before: Dict,
-    smart_after: Dict,
+    validate_config: dict,
+    smart_before: dict,
+    smart_after: dict,
     ignore_smart: bool = False,
 ) -> None:
     """
@@ -48,8 +47,8 @@ def compare_drive_data(
 
 
 def _validate_smart_value(
-    field: str, smart_before: Dict, smart_after: Dict, serial: str
-) -> Tuple:
+    field: str, smart_before: dict, smart_after: dict, serial: str
+) -> tuple:
     expected = None
     if "-thresh" in field:
         # For SATA\SAS drives
@@ -75,7 +74,7 @@ def _validate_smart_value(
     return actual, expected
 
 
-def _find_in_nested_dict(nested_dict: dict, key: str) -> Optional[object]:
+def _find_in_nested_dict(nested_dict: dict, key: str) -> object | None:
     """
     Find a value of a given key in a nested dictionary
 
@@ -115,6 +114,8 @@ def _compare_drive_data_field(
     '-' -> in-between range (lower_val is required)
     '/' -> multiple options (existence of word in a string)
     '~' -> increment the 'expected' by "increment_by" and compare
+    '<%' -> percentage decrease: fail if actual < before * (1 - pct/100)
+    '>%' -> percentage increase: fail if actual > before * (1 + pct/100)
 
     @param string/numeric before, actual:
     @param string instr: e.g. ">80", "=="
@@ -123,7 +124,7 @@ def _compare_drive_data_field(
     lower = 0
     opr = None
     msg = f"Compare drive {drive_serial_no} {field} before vs. after test."
-    out = re.search(r"==|>=|<=|>|<|/|-|~|=", instr)
+    out = re.search(r"==|>=|<=|<%|>%|>|<|/|-|~|=", instr)
     if out:
         opr = out.group(0)
         if opr == "-":
@@ -139,6 +140,11 @@ def _compare_drive_data_field(
         elif opr == "/":
             expected = instr.split("/")
             _evaluate_expression(expected, actual, opr, msg, ignore_smart)
+        elif opr in ("<%", ">%"):
+            pct = int(instr.replace(opr, ""))
+            _evaluate_expression(
+                actual, before, opr, msg, ignore_smart, increment_by=pct
+            )
         elif opr == "==":
             _evaluate_expression(actual, before, "=", msg, ignore_smart)
         else:
@@ -187,6 +193,8 @@ def _evaluate_expression(
         "-": "range",
         "/": "isIn",
         "~": "incrementby",
+        "<%": "pct_decrease",
+        ">%": "pct_increase",
         "=": "isEqual",
     }
     AutovalUtils.validate_in(
@@ -223,6 +231,30 @@ def _evaluate_expression(
         AutovalUtils.validate_less_equal(
             actual,
             expected,
+            msg,
+            log_on_pass=False,
+            raise_on_fail=False,
+            warning=ignore_smart,
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.SMART_COUNTER_ERR,
+        )
+    elif opr_match[opr] == "pct_decrease":
+        threshold = expected * (1 - increment_by / 100)
+        AutovalUtils.validate_greater_equal(
+            actual,
+            threshold,
+            msg,
+            log_on_pass=False,
+            raise_on_fail=False,
+            warning=ignore_smart,
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.SMART_COUNTER_ERR,
+        )
+    elif opr_match[opr] == "pct_increase":
+        threshold = expected * (1 + increment_by / 100)
+        AutovalUtils.validate_less_equal(
+            actual,
+            threshold,
             msg,
             log_on_pass=False,
             raise_on_fail=False,
