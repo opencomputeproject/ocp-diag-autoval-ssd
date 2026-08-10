@@ -3,7 +3,8 @@ import os
 import subprocess
 import threading
 import time
-from typing import Any, Dict, Iterable, List, Optional
+from collections.abc import Iterable
+from typing import Any, Optional
 
 from autoval.lib.host.host import Host
 from autoval.lib.utils.autoval_exceptions import CmdError, TestError
@@ -35,7 +36,10 @@ class SSDFileAppend(SSDTestBase):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(
-            *args, inputT=SSDFileAppendInput, outputT=SSDFileAppendOutput, **kwargs
+            *args,
+            inputT=SSDFileAppendInput,
+            outputT=SSDFileAppendOutput,  # pyrefly: ignore [bad-argument-type]
+            **kwargs,
         )
         self.workload_folder_path: Optional[str] = self.test_control.get(
             "workload_folder_path", None
@@ -49,12 +53,14 @@ class SSDFileAppend(SSDTestBase):
         self.pass_fail_verify: bool = self.test_control.get("pass_fail_verify", False)
         self.cycle: int = self.test_control.get("cycle_count", 1)
         self.dix_ns_resize: bool = self.test_control.get("dix_ns_resize", False)
-        self.outliers: Dict[str, Any] = {}
-        self.fileappend_data: Dict[str, int] = {}
+        self.outliers: dict[str, Any] = {}
+        self.fileappend_data: dict[str, int] = {}
+        # pyrefly: ignore [bad-assignment]
         self._host: Host = self.host if self.host is not None else Host
 
     def setup(self, *args: Any, **kwargs: Any) -> None:
         super().setup(init_bg_polling=False)
+        # pyrefly: ignore [bad-assignment]
         self._host = self.host if self.host is not None else Host
         # Create Remote Temp Directory
         success, temp_dir = self.create_temp_directory(self._host)
@@ -123,7 +129,7 @@ class SSDFileAppend(SSDTestBase):
 
         if self.dix_ns_resize:
             for dix_drive_list in self.dix_ns_resize_setup():
-                self.set_power_state(dix_drive_list)
+                self.set_power_state(drives=dix_drive_list)
                 self.initialize_drives(dix_drive_list)
                 self.filedelete(dix_drive_list)
 
@@ -156,6 +162,7 @@ class SSDFileAppend(SSDTestBase):
         self.sweep_param_value = NvmeResizeUtil.DEFAULT_OP_PERCENT
         NvmeResizeUtil.perform_resize(
             self._host,
+            # pyrefly: ignore [bad-argument-type]
             self.test_specific_drives,
             sweep_param_key=self.sweep_param_key,
             sweep_param_unit=self.sweep_param_unit,
@@ -191,6 +198,7 @@ class SSDFileAppend(SSDTestBase):
 
         NvmeResizeUtil.perform_resize(
             self._host,
+            # pyrefly: ignore [bad-argument-type]
             self.test_specific_drives,
             sweep_param_key=self.sweep_param_key,
             sweep_param_unit=self.sweep_param_unit,
@@ -199,7 +207,12 @@ class SSDFileAppend(SSDTestBase):
             cycle=self.cycle,
         )
 
-    def dix_ns_resize_setup(self) -> Iterable[List[Drive]]:
+    def dix_ns_resize_setup(
+        self,
+        drives: list[Drive] | None = None,
+        dix_only: bool = True,
+        sweep_param_value: int | float | None = None,
+    ) -> Iterable[list[Drive]]:
         """
         Set up the DIX namespace resize process for the test drives.
 
@@ -221,7 +234,9 @@ class SSDFileAppend(SSDTestBase):
         self.performed_resize = True
         lbaf_to_flbas_map = (
             NvmeResizeUtil.validate_drives_support_dix_resize_lba_formats(
-                self.host, self.test_specific_drives
+                # pyrefly: ignore [bad-argument-type]
+                self.host,
+                self.test_specific_drives,
             )
         )
         self.log_info(f"lbaf to flbas map: {lbaf_to_flbas_map}")
@@ -241,6 +256,7 @@ class SSDFileAppend(SSDTestBase):
 
             NvmeResizeUtil.perform_resize(
                 self.host,
+                # pyrefly: ignore [bad-argument-type]
                 dix_test_drives,
                 sweep_param_key=self.sweep_param_key,
                 sweep_param_unit=self.sweep_param_unit,
@@ -257,7 +273,10 @@ class SSDFileAppend(SSDTestBase):
                 drive_name[5:] for drive_name in self.data_ssds.devname.tolist()
             ]
             dix_test_drives = StorageDeviceFactory(
-                self.host, dix_drives_list, None
+                # pyrefly: ignore [bad-argument-type]
+                self.host,
+                dix_drives_list,
+                None,
             ).create()
 
             dix_test_drives = [
@@ -272,7 +291,7 @@ class SSDFileAppend(SSDTestBase):
             self.log_info(f"test drives {dix_test_drives}")
             yield dix_test_drives
 
-    def initialize_drives(self, drives: Optional[List[Drive]] = None) -> None:
+    def initialize_drives(self, drives: Optional[list[Drive]] = None) -> None:
         """
         Initialize and prepare specific drives for testing by setting up drive objects and entries
 
@@ -295,7 +314,11 @@ class SSDFileAppend(SSDTestBase):
                 entry.success = False
                 return
 
-    def set_power_state(self, drives: Optional[List[Drive]] = None) -> None:
+    def set_power_state(
+        self,
+        workload_config: dict[str, Any] | None = None,
+        drives: Optional[list[Drive]] = None,
+    ) -> None:
         """
         Set power state on drives.
 
@@ -314,7 +337,7 @@ class SSDFileAppend(SSDTestBase):
                 power_state_set_key=power_state,
             )
 
-    def filedelete(self, drives: Optional[List[Drive]] = None) -> None:
+    def filedelete(self, drives: Optional[list[Drive]] = None) -> None:
         """
         This function will delete all the files present in the workdir
 
@@ -436,11 +459,11 @@ while True:
             self._host.run(f"python3 {py_file}")
         except CmdError:
             return
-        except IOError:
+        except OSError:
             print("cannot write to %s" % filename)
             return
 
-    def umount(self, drives: Optional[List[Drive]] = None) -> None:
+    def umount(self, drives: Optional[list[Drive]] = None) -> None:
         """
         This function will unmount the mounted drives.
 
@@ -467,6 +490,7 @@ while True:
 
         self.log_info("================ Clean Up Process=======================")
         if hasattr(self, "saved_old_wl"):
+            # pyrefly: ignore [bad-assignment]
             self._host = self.host
             self.log_info(
                 f"Restoring workloads from {self.saved_old_wl} on {self._host.hostname}"
@@ -494,6 +518,7 @@ while True:
             )
             self.sweep_param_value = NvmeResizeUtil.DEFAULT_OP_PERCENT
             if self.fdp_enabled:
+                # pyrefly: ignore [bad-argument-type]
                 FDPUtils.fdp_cleanup(self.host, self.nvme_id_ctrls)
             ns_validate_queue = []
             for device in self.nvme_id_ctrls:
@@ -511,6 +536,7 @@ while True:
                 if ns_validate_queue:
                     AutovalThread.wait_for_autoval_thread(ns_validate_queue)
             AutovalLog.log_info(
+                # pyrefly: ignore [missing-attribute]
                 "NVME LIST AFTER CLEANUP\n" + self.host.run("nvme list")
             )
         self.umount()

@@ -9,7 +9,7 @@ import json
 import os
 import re
 from pprint import pformat
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.utils.async_utils import AsyncJob, AsyncUtils
@@ -30,7 +30,7 @@ from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
 
 class NvmeCli(StorageTestBase):
     """
-    Test to validate if NVME spec commands are supported
+    Test to validate if NVME 1.2.1 spec commands are supported
     Validations done on all the NVME drives:
         Get the controller properties,
         Get the Firmware Log,
@@ -40,11 +40,16 @@ class NvmeCli(StorageTestBase):
         Get the operating parameters of the specified controller,
         identified by the Feature Identifier,
         Get Vendor Specific Internal Logs,
-        Retrieve Command Effects Log.
+        Retrieve Command Effects Log,
         Get Vendor Specific drive up time,
         Get Smart log,
-        Get/Set Power mode.
-        validate capacity
+        Get/Set Power mode,
+        Validate capacity,
+        Retrieve OCP log pages (0xC0-0xC9):
+            Smart (0xC0), Error Recovery (0xC1), Telemetry String (0xC3),
+            Device Capabilities (0xC4), Unsupported Requirements (0xC5),
+            Hardware Component (0xC6), TCG Configuration (0xC7),
+            Latency Monitor (0xC9).
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -60,7 +65,7 @@ class NvmeCli(StorageTestBase):
         )
         # List of NVMECli commands to skip
         self.skip_commands = self.test_control.get("skip_commands", [])
-
+        self.skip_latency_monitor = self.test_control.get("skip_latency_monitor", False)
         self.fdp_setup = self.test_control.get("fdp_setup", False)
         self.fdp_enabled = False
         self.comparand_nvme_version = self.test_control.get(
@@ -91,7 +96,7 @@ class NvmeCli(StorageTestBase):
                     new_nvme_cli_command_output,
                 )
 
-    def run_nvme_cli_commands(self, nvme_version: str) -> list[dict]:
+    def run_nvme_cli_commands(self, nvme_version: str) -> List[Dict]:
         """
         Run all nvme-cli commands for this test.
 
@@ -114,10 +119,15 @@ class NvmeCli(StorageTestBase):
         )
         if self.fdp_setup:
             self.validate_fdp()
-        self.validate_latency_monitor()
-        return command_outputs
+        if self.skip_latency_monitor:
+            self.log_debug(
+                "Skipping latency monitor validation (skip_latency_monitor=True)"
+            )
+        else:
+            self.validate_latency_monitor()
+        return command_outputs  # pyrefly: ignore [bad-return]
 
-    def validate_nvme_drives(self, drive: NVMeDrive, nvme_version: str) -> list[dict]:
+    def validate_nvme_drives(self, drive: NVMeDrive, nvme_version: str) -> List[Dict]:
         """
         This method performs a series of NVMe cli commands on the NVMe drive
         and performs validation using the output of each command that is run.
@@ -199,7 +209,7 @@ class NvmeCli(StorageTestBase):
                 AutovalUtils.validate_equal(
                     csts,
                     1,
-                    "{}: csts is {}".format(drive.block_name, csts),
+                    "%s: csts is %s" % (drive.block_name, csts),
                     component=COMPONENT.STORAGE_DRIVE,
                     error_type=ErrorType.DRIVE_ERR,
                 )
@@ -212,7 +222,7 @@ class NvmeCli(StorageTestBase):
                     error_type=ErrorType.DRIVE_ERR,
                 )
 
-    def _validate_crypto_erase_support(self, drive: NVMeDrive) -> None:
+    def _validate_crypto_erase_support(self, drive) -> None:
         out = drive.get_crypto_erase_support_status()
         if out is False:
             self.log_info(
@@ -228,7 +238,7 @@ class NvmeCli(StorageTestBase):
                 error_type=ErrorType.NVME_ERR,
             )
 
-    def _get_fw_log(self, drive: NVMeDrive) -> dict:
+    def _get_fw_log(self, drive: NVMeDrive) -> Dict:
         """
         Runs the nvme fw-log command on the provided drive.
 
@@ -254,7 +264,7 @@ class NvmeCli(StorageTestBase):
         )
         return fw_log
 
-    def _get_smart_log(self, drive: NVMeDrive) -> dict:
+    def _get_smart_log(self, drive: NVMeDrive) -> Dict:
         """
         Runs the nvme smart-log command on the provided drive.
 
@@ -275,7 +285,7 @@ class NvmeCli(StorageTestBase):
         )
         return smart_log
 
-    def _get_error_log(self, drive: NVMeDrive) -> dict:
+    def _get_error_log(self, drive: NVMeDrive) -> Dict:
         """
         Retrieves the error log from the given drive.
 
@@ -300,7 +310,7 @@ class NvmeCli(StorageTestBase):
         )
         return error_log[0]
 
-    def _get_id_ns(self, drive: NVMeDrive) -> dict:
+    def _get_id_ns(self, drive: NVMeDrive) -> Dict:
         """
         This function retrieves identity namespace results for the given drive.
 
@@ -324,7 +334,7 @@ class NvmeCli(StorageTestBase):
         )
         return out_json
 
-    def _get_nvme_ns_map(self, drive: NVMeDrive) -> dict:
+    def _get_nvme_ns_map(self, drive: NVMeDrive) -> Dict:
         """
         Runs the nvme list command on the provided drive.
 
@@ -347,7 +357,7 @@ class NvmeCli(StorageTestBase):
             )
         return n_s
 
-    def _get_feature(self, drive: NVMeDrive) -> list[str]:
+    def _get_feature(self, drive: NVMeDrive) -> List[str]:
         """
         Runs the nvme get-feature command on the provided drive.
 
@@ -377,9 +387,6 @@ class NvmeCli(StorageTestBase):
         ----------
         drive : :obj: 'Class'
             Object of vendor class.
-        Returns:
-            Optional[bool]: True if the internal log has been taken, False otherwise.
-            If the drive does not support internal log, None is returned.
         """
         try:
             status = drive.get_internal_log(self.nvme_telemetry_log_timeout)
@@ -388,17 +395,16 @@ class NvmeCli(StorageTestBase):
         except NotImplementedError as exc:
             self.log_info(exc)
 
-    def _get_effects_log(self, drive: NVMeDrive) -> Optional[dict]:
+    def _get_effects_log(self, drive: NVMeDrive) -> Optional[Dict]:
         """
         This method retrieves the ACS(Admin Command Set) and
         IOCS(I/O Command Set) logs of the drive.
 
         Args:
-            drive (NVMeDrive): The drive from which to retrieve effects logs.
+            drive: The nvme drive from which to retrieve effects logs.
 
         Returns:
-            Optional[Dict]: A dictionary containing the ACS and IOCS logs.
-            If the drive does not support effects logs, None is returned.
+            None
         """
         try:
             out = drive.get_effects_log()
@@ -430,9 +436,6 @@ class NvmeCli(StorageTestBase):
         ----------
         drive : :obj: 'Class'
             Object of vendor class.
-        Returns:
-            Optional[int]: Drive up time in seconds. If the drive does not support
-            vendor specific timestamp, None is returned.
         """
         try:
             out = drive.get_vs_timestamp()
@@ -443,18 +446,18 @@ class NvmeCli(StorageTestBase):
                 time = str(datetime.timedelta(seconds=seconds))
             except Exception:
                 time = "%s years" % years
-            self.log_info(f"Drive up time {drive}: {time}")
+            self.log_info("Drive up time %s: %s" % (drive, time))
             return out
         except NotImplementedError as exc:
             self.log_info(exc)
         except Exception as exc:
             raise TestError(
-                "get_vs_timestamp failed for drive {}: {}".format(drive, str(exc)),
+                "get_vs_timestamp failed for drive %s: %s" % (drive, str(exc)),
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.DRIVE_ERR,
             )
 
-    def _validate_power_mode(self, drive) -> dict:
+    def _validate_power_mode(self, drive: NVMeDrive) -> Dict:
         """
         This method checks for the npss (Number of Power State Support)
         of the data drive. Current M.2 data SSD's have npss 0 or 1. For
@@ -493,7 +496,7 @@ class NvmeCli(StorageTestBase):
         )
         return output
 
-    def _check_oacs_device_self_test(self, drive: NVMeDrive) -> Optional[dict]:
+    def _check_oacs_device_self_test(self, drive: NVMeDrive) -> Optional[Dict]:
         """Validate Device self-test command support
         Method checks for  OACS field from id-ctrl and validates Device self-test command support
 
@@ -518,7 +521,7 @@ class NvmeCli(StorageTestBase):
             return
         return oacs
 
-    def _validate_capacity(self, drive: NVMeDrive) -> Optional[dict]:
+    def _validate_capacity(self, drive: NVMeDrive) -> Optional[Dict]:
         """Validate drive capacity
         Method checks for unvmcap and tnvmcap from id-ctrl and validates drive capacity
 
@@ -566,10 +569,16 @@ class NvmeCli(StorageTestBase):
             drive for drive in self.test_drives if drive.block_name != self.boot_drive
         ][:1]
         nvme_id_ctrls = NvmeResizeUtil.get_nvme_ctrls(
-            self.host, test_drives, nvme_id_ctrl_filter="True"
+            # pyrefly: ignore [bad-argument-type]
+            self.host,
+            test_drives,
+            nvme_id_ctrl_filter="True",
         )
-        # pyrefly: ignore [bad-argument-type]
-        FDPUtils.validate_fdp_support(self.host, nvme_id_ctrls)
+        FDPUtils.validate_fdp_support(
+            # pyrefly: ignore [bad-argument-type]
+            self.host,
+            nvme_id_ctrls,
+        )
         # pyrefly: ignore [bad-argument-type]
         FDPUtils.fdp_setup(self.host, nvme_id_ctrls)
         AutovalLog.log_info("FDP setup completed")
@@ -589,7 +598,10 @@ class NvmeCli(StorageTestBase):
             )
             return
 
-        FioSynthFlashUtils.tool_setup(self.host)
+        FioSynthFlashUtils.tool_setup(
+            # pyrefly: ignore [bad-argument-type]
+            self.host,
+        )
         test_drives = [
             drive for drive in self.test_drives if drive.block_name != self.boot_drive
         ][:1]
@@ -598,6 +610,7 @@ class NvmeCli(StorageTestBase):
         workload = "Nvme_Cli_Wkld"
         work_dir = self.dut_logdir[self.host.hostname]
         self.latency_monitor = LatencyMonitor(
+            # pyrefly: ignore [bad-argument-type]
             host=self.host,
             test_drives=test_drives,
             test_control=self.test_control,
@@ -628,14 +641,14 @@ class NvmeCli(StorageTestBase):
     def compare_command_outputs(
         self,
         first_nvme_version: str,
-        first_nvme_version_outputs: list[dict],
+        first_nvme_version_outputs: List[Dict],
         new_nvme_version: str,
-        new_nvme_version_outputs: list[dict],
+        new_nvme_version_outputs: List[Dict],
     ) -> None:
         """
         Compares the outputs of the commands that were saved for each nvme-cli version.
         Only the outputs of commands run on the last drive are compared.
-        Cmds outputs with difference are saved to the results directory.
+        Cmds outputs with difference are saved to manifold.
 
         Args:
             first_nvme_version: The first nvme-cli version to compare.

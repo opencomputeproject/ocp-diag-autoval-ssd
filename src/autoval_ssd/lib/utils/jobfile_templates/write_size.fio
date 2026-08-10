@@ -1,0 +1,11 @@
+[global]
+direct=1
+rw=RW
+bs=BLKSIZE
+iodepth=IODEPTH
+ioengine=io_uring
+numjobs=NUM_JOBS
+size=SIZE
+runtime=RUNTIME
+group_reporting
+name=NAME

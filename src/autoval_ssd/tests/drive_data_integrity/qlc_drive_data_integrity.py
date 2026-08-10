@@ -223,12 +223,12 @@ class QLCDriveDataIntegrityTest(DriveDataIntegrityTest):
         ]
 
     def create_fio_job(
-        self, job_str: List[str], drives: List[Drive], name: str, cycle: int = 1
+        self, job_args_list: List[str], drives: List[Drive], name: str, cycle: int = 1
     ) -> str:
         """Override parent method to support QLC-specific job creation.
 
         Args:
-            job_str: FIO job arguments
+            job_args_list: FIO job arguments
             drives: List of drives
             name: Job name
             cycle: Test cycle number
@@ -236,7 +236,7 @@ class QLCDriveDataIntegrityTest(DriveDataIntegrityTest):
         Returns:
             Complete FIO job content
         """
-        dev_str = "[global]\n" + "\n".join(job_str) + "\n"
+        dev_str = "[global]\n" + "\n".join(job_args_list) + "\n"
         filename = f"seq_io_{name}_cycle_{cycle}.fio"
 
         if name == "random_lba":
@@ -244,6 +244,7 @@ class QLCDriveDataIntegrityTest(DriveDataIntegrityTest):
         else:
             dev_str = self.create_qlc_job_content(dev_str, drives, name, cycle)
 
+        # pyrefly: ignore [no-matching-overload]
         job_file = os.path.join(self.fiolog_dir, filename)
         if self.remote_fio:
             FileActions.write_data(job_file, dev_str)
@@ -445,11 +446,15 @@ class QLCDriveDataIntegrityTest(DriveDataIntegrityTest):
         self.log_info(
             f"Qlc power cycle loop in progress for {self.num_power_cycles} iterations"
         )
+        # pyrefly: ignore [missing-attribute]
+        current_reboot = self.host.get_last_reboot()
 
         for i in range(self.num_power_cycles):
             self.log_info(f"Power cycle iteration {i + 1} of {self.num_power_cycles}")
+            # pyrefly: ignore [missing-attribute]
             cmd = f"hwc power_reset {self.host.hostname}"
             AutovalLog.log_info(f"Running command: {cmd}")
+            # pyrefly: ignore [missing-attribute]
             self.host.localhost.run(cmd=cmd)
 
             if i < self.num_power_cycles - 1:
@@ -457,7 +462,9 @@ class QLCDriveDataIntegrityTest(DriveDataIntegrityTest):
                 time.sleep(30)
 
         self.log_info("Performing system health check after final power cycle")
+        # pyrefly: ignore [missing-attribute]
         self.host.reconnect(timeout=2400)
+        # pyrefly: ignore [missing-attribute]
         self.host.check_system_health()
         self.log_info("Qlc power cycle loop completed")
 
@@ -468,7 +475,9 @@ class QLCDriveDataIntegrityTest(DriveDataIntegrityTest):
         t10_dix_format = "4096+64"
         for drive in self.test_drives:
             current_lbaf_details = NvmeResizeUtil.get_lbaf_details(
-                self.host, drive.block_name
+                # pyrefly: ignore [bad-argument-type]
+                self.host,
+                drive.block_name,
             )
             if (
                 current_lbaf_details.get("ms") == 64
@@ -480,7 +489,9 @@ class QLCDriveDataIntegrityTest(DriveDataIntegrityTest):
                 continue
 
             lbaf_to_flbas_map = NvmeResizeUtil.get_lbaf_to_flbas_map(
-                self.host, drive.block_name
+                # pyrefly: ignore [bad-argument-type]
+                self.host,
+                drive.block_name,
             )
             lbaf = lbaf_to_flbas_map.get(t10_dix_format, None)
 
@@ -495,7 +506,7 @@ class QLCDriveDataIntegrityTest(DriveDataIntegrityTest):
             AutovalUtils.validate_no_exception(
                 NVMeUtils.format_nvme,
                 [self.host, drive.block_name, 0, None, f" -l {lbaf}"],
-                f"{drive.block_name }: Format with lba {t10_dix_format}",
+                f"{drive.block_name}: Format with lba {t10_dix_format}",
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.NVME_ERR,
             )

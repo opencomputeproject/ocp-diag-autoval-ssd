@@ -423,6 +423,7 @@ class DiskUtils:
             lsblk = AutovalUtils.loads_json(lsblk, "%s: json conversion" % cmd)
         devices = {
             device["name"]: device["children"]
+            # pyrefly: ignore [bad-index]
             for device in lsblk["blockdevices"]
             if device["type"] in ("disk", "md", "raid0") and "children" in device
         }
@@ -713,6 +714,60 @@ class DiskUtils:
                 DiskUtils.md5[device] = md5
             return md5
         raise TestError("Failed to find md5sum in %s" % out)
+
+    @staticmethod
+    def _get_single_md5_checksum(host, file_path: str) -> str:
+        """Get md5 checksum for a single file. Used for parallel chunk processing."""
+        out = host.run(cmd=f"md5sum {file_path}", timeout=7200)
+        match = re.match(r"(^\S+)\s*", out)
+        if match:
+            return match.group(1)
+        raise TestError(
+            f"Failed to parse md5sum output for {file_path}: {out}",
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.DRIVE_ERR,
+        )
+
+    @staticmethod
+    def get_md5_sum_chunked(host, file_paths: list[str], device=None) -> str:
+        """Get combined md5 checksum for multiple chunk files."""
+        threads = []
+        for file_path in file_paths:
+            threads.append(
+                AutovalThread.start_autoval_thread(
+                    DiskUtils._get_single_md5_checksum, host, file_path
+                )
+            )
+        hashes = AutovalThread.wait_for_autoval_thread(threads)
+        combined = host.run(cmd=f"echo -n '{''.join(hashes)}' | md5sum", timeout=60)
+        match = re.match(r"(^\S+)\s*", combined)
+        if not match:
+            raise TestError(
+                f"Failed to find md5sum in {combined}",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.DRIVE_ERR,
+            )
+        md5 = match.group(1)
+        if device:
+            DiskUtils.md5[device] = md5
+        return md5
+
+    @staticmethod
+    def get_md5_for_drivelist_chunked(
+        host, drive_chunk_map: dict[str, list[str]]
+    ) -> dict[str, str]:
+        """Get md5 values for all drives using chunked files in parallel."""
+        devices = []
+        threads = []
+        for device, paths in drive_chunk_map.items():
+            devices.append(device)
+            threads.append(
+                AutovalThread.start_autoval_thread(
+                    DiskUtils.get_md5_sum_chunked, host, paths
+                )
+            )
+        results = AutovalThread.wait_for_autoval_thread(threads)
+        return dict(zip(devices, results))
 
     @staticmethod
     def ramdisk(

@@ -3,7 +3,7 @@ import json
 import os
 import pathlib
 import typing as t
-from typing import Any, Dict
+from typing import Any
 
 from autoval.lib.host.host import Host
 from autoval.lib.utils.autoval_exceptions import TestError
@@ -12,6 +12,7 @@ from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval.lib.utils.file_actions import FileActions
 from autoval.lib.utils.generic_utils import GenericUtils
 from autoval_ssd.lib.utils.fio.fio_synth_flash_utils import FioSynthFlashUtils
+from autoval_ssd.lib.utils.storage.drive import Drive
 from autoval_ssd.lib.utils.storage.nvme.fdp_utils import FDPUtils
 from autoval_ssd.lib.utils.storage.nvme.latency_monitor_utils import LatencyMonitor
 from autoval_ssd.lib.utils.storage.nvme.nvme_resize_utils import NvmeResizeUtil
@@ -54,6 +55,7 @@ class SSDCachebenchTest(SSDTestBase):
         self.WL_SUITES = pathlib.Path(
             self.cachelib_path + "cachelib/cachebench/test_configs"
         )
+        # pyrefly: ignore [missing-attribute]
         cachebench_check = host.run_get_result(
             self.cachebench_path + "cachebench --version", ignore_status=True
         )
@@ -65,11 +67,15 @@ class SSDCachebenchTest(SSDTestBase):
         # Create Remote Temp Directory
         success, temp_dir = self.create_temp_directory(host)
         self.validate_condition(
-            success, f"Create temp directory {temp_dir} on {host.hostname}."
+            # pyrefly: ignore [missing-attribute]
+            success,
+            # pyrefly: ignore [missing-attribute]
+            f"Create temp directory {temp_dir} on {host.hostname}.",
         )
         self.work_dir = temp_dir
 
         # Copy workloads into the temp dir
+        # pyrefly: ignore [missing-attribute]
         host.run(f"cp -rf {self.WL_SUITES} {self.work_dir}/test_configs")
 
         # Transfer over additional workloads
@@ -173,7 +179,7 @@ class SSDCachebenchTest(SSDTestBase):
             self.run_workload(workload_config, index)
             index += 1
 
-    def resize_full_capacity(self, workload_config: Dict[str, Any]) -> None:
+    def resize_full_capacity(self, workload_config: dict[str, Any]) -> None:
         """
         Resize the drives to full capacity.
 
@@ -191,6 +197,7 @@ class SSDCachebenchTest(SSDTestBase):
         self.sweep_param_value = NvmeResizeUtil.DEFAULT_OP_PERCENT
         NvmeResizeUtil.perform_resize(
             self.host,
+            # pyrefly: ignore [bad-argument-type]
             self.test_specific_drives,
             sweep_param_key=self.sweep_param_key,
             sweep_param_unit=self.sweep_param_unit,
@@ -199,7 +206,7 @@ class SSDCachebenchTest(SSDTestBase):
             cycle=self.cycle,
         )
 
-    def over_provisioning_setup(self, workload_config: Dict[str, Any]) -> None:
+    def over_provisioning_setup(self, workload_config: dict[str, Any]) -> None:
         """
         Overprovisioning the drives to the desired capacity.
 
@@ -213,11 +220,13 @@ class SSDCachebenchTest(SSDTestBase):
         try:
             self.sweep_param_key: "NvmeResizeUtil.SweepParamKeyEnum" = (
                 NvmeResizeUtil.SweepParamKeyEnum[
+                    # pyrefly: ignore [bad-index]
                     workload_config.get("sweep_param_key", None)
                 ]
             )
             self.sweep_param_unit: "NvmeResizeUtil.SweepParamUnitEnum" = (
                 NvmeResizeUtil.SweepParamUnitEnum[
+                    # pyrefly: ignore [bad-index]
                     workload_config.get("sweep_param_unit", None)
                 ]
             )
@@ -227,6 +236,7 @@ class SSDCachebenchTest(SSDTestBase):
 
         NvmeResizeUtil.perform_resize(
             self.host,
+            # pyrefly: ignore [bad-argument-type]
             self.test_specific_drives,
             sweep_param_key=self.sweep_param_key,
             sweep_param_unit=self.sweep_param_unit,
@@ -235,13 +245,20 @@ class SSDCachebenchTest(SSDTestBase):
             cycle=self.cycle,
         )
 
-    def set_power_state(self, workload_config: Dict[str, Any]) -> None:
+    def set_power_state(
+        self,
+        workload_config: dict[str, Any] | None = None,
+        drives: list[Drive] | None = None,
+    ) -> None:
         """
         Set the power state of all drives in a test.
 
         Args:
             workload_config : A dictionary containing the configuration for the workload
+            drives: Optional list of drives (unused, for parent signature compat).
         """
+        if workload_config is None:
+            return
         self.power_state = workload_config.get("power_state", False)
         if self.power_state:
             ComponentTestBase.power_state(
@@ -250,7 +267,7 @@ class SSDCachebenchTest(SSDTestBase):
                 power_state_set_key=workload_config.get("set_power_state", ""),
             )
 
-    def run_workload(self, workload_config: Dict[str, Any], index: int) -> None:
+    def run_workload(self, workload_config: dict[str, Any], index: int) -> None:
         """
         Run the specified workload using Cachebench.
 
@@ -263,6 +280,7 @@ class SSDCachebenchTest(SSDTestBase):
             index: The index of the test.
         """
 
+        # pyrefly: ignore [not-iterable]
         for workload in workload_config.get("workload_suites"):
             # Run Cachebench
             self.log_info("Starting Cachebench Tests ")
@@ -273,6 +291,7 @@ class SSDCachebenchTest(SSDTestBase):
                 f"test{index}_{workload.get('name')}" + "-" + self.create_timestamp()
             )
             remote_run_folder = f"{self.work_dir}/{run_folder}"
+            # pyrefly: ignore [missing-attribute]
             self.host.run("mkdir " + remote_run_folder)
             local_run_folder = f"{self.resultsdir}/{run_folder}"
 
@@ -280,9 +299,11 @@ class SSDCachebenchTest(SSDTestBase):
                 1
             ]
             workload_folder_path = remote_run_folder + "/" + workload_folder_name
+            # pyrefly: ignore [missing-attribute]
             self.host.run("mkdir " + workload_folder_path)
 
             # Copying the Workload Directory to temp folder
+            # pyrefly: ignore [missing-attribute]
             self.host.run(
                 "cp -a "
                 + self.work_dir
@@ -324,6 +345,7 @@ class SSDCachebenchTest(SSDTestBase):
             )
             cmd = cachebench_path + json_test_config_path + output_log_path
             self.latency_monitor = LatencyMonitor(
+                # pyrefly: ignore [bad-argument-type]
                 host=self.host,
                 test_drives=self.test_drives,
                 test_control=self.test_control,
@@ -334,7 +356,9 @@ class SSDCachebenchTest(SSDTestBase):
             # Run Cachebench on system
             try:
                 msgs = []
+                # pyrefly: ignore [missing-attribute]
                 self.log_info(f"Running {cmd} on host {self.host.hostname}")
+                # pyrefly: ignore [missing-attribute]
                 result = self.host.run_get_result(
                     cmd,
                     timeout=self.input_params.timeout,
@@ -345,6 +369,7 @@ class SSDCachebenchTest(SSDTestBase):
                 if result.return_code != 0:
                     success = False
                     msg = (
+                        # pyrefly: ignore [missing-attribute]
                         f"Cachebench failed with rc={result.return_code} on host {self.host.hostname} "
                         + f"-- {result.stdout} {result.stderr}"
                     )
@@ -353,10 +378,18 @@ class SSDCachebenchTest(SSDTestBase):
                 # Otherwise attempt to RX the results and process them.
                 else:
                     result_folder = self._rx_run_results(
-                        self.host, remote_run_folder, local_run_folder, msgs=msgs
+                        # pyrefly: ignore [bad-argument-type]
+                        self.host,
+                        remote_run_folder,
+                        local_run_folder,
+                        msgs=msgs,
                     )
                     cachebench_data = self._process_results(
-                        self.host, result_folder, msgs=msgs
+                        # pyrefly: ignore [bad-argument-type]
+                        self.host,
+                        # pyrefly: ignore [bad-argument-type]
+                        result_folder,
+                        msgs=msgs,
                     )
                     if lm_enabled_drives:
                         self.latency_monitor.collect_logs(
@@ -367,10 +400,12 @@ class SSDCachebenchTest(SSDTestBase):
             except Exception:
                 success = False  # noqa
                 msg = (
+                    # pyrefly: ignore [missing-attribute]
                     f"Cachebench failed on host {self.host.hostname} "
                     + f"-- {get_traceback_str()}"
                 )
                 self.log_error(msg)
+                # pyrefly: ignore [unbound-name]
                 msgs.append(msg)
 
             if self.pass_fail_verify:
@@ -416,18 +451,21 @@ class SSDCachebenchTest(SSDTestBase):
 
     @staticmethod
     def compare_cachebench_logs(
-        host, benchmark_dict: t.Union[dict, Dict[str, Dict]], log_file: str
+        host, benchmark_dict: t.Union[dict, dict[str, dict]], log_file: str
     ) -> None:
         pass
         if "TaoLeader" in log_file:
+            # pyrefly: ignore [missing-attribute]
             verification_fields = benchmark_dict.get("CacheBench_loop").get("TaoLeader")
 
         elif "MemCache" in log_file:
+            # pyrefly: ignore [missing-attribute]
             verification_fields = benchmark_dict.get("CacheBench_loop").get("MemCache")
 
         ext_data = host.run("cat " + log_file)
         log_dict = SSDCachebenchTest.parse_cachebench_output_log(ext_data)
 
+        # pyrefly: ignore [unbound-name]
         for k in verification_fields.keys():
             if "MIN" in k:
                 cb_op_val = float(log_dict[k.split("_MIN")[0]])
@@ -436,7 +474,7 @@ class SSDCachebenchTest(SSDTestBase):
                     # pyre-fixme[61]: `verification_fields` is undefined, or not
                     #  always defined.
                     float(verification_fields[k].split(">")[1]),
-                    msg="[%s]: %s" % (cb_op_val, k),
+                    msg="[{}]: {}".format(cb_op_val, k),
                     raise_on_fail=False,
                 )
             elif "MAX" in k:
@@ -446,7 +484,7 @@ class SSDCachebenchTest(SSDTestBase):
                     # pyre-fixme[61]: `verification_fields` is undefined, or not
                     #  always defined.
                     float(verification_fields[k].split("<")[1]),
-                    msg="[%s]: %s" % (cb_op_val, k),
+                    msg="[{}]: {}".format(cb_op_val, k),
                     raise_on_fail=False,
                 )
             else:
@@ -539,12 +577,17 @@ class SSDCachebenchTest(SSDTestBase):
         if hasattr(self, "saved_old_wl"):
             host = self.host
             self.log_info(
+                # pyrefly: ignore [missing-attribute]
                 f"Restoring workloads from {self.saved_old_wl} on {host.hostname}"
             )
             # First remove current folder, then restore the original folder.
+            # pyrefly: ignore [missing-attribute]
             host.run(f"rm -rf {self.SSDCachebenchTest.WL_SUITES}")
+            # pyrefly: ignore [missing-attribute]
             host.run(f"cp -rf {self.saved_old_wl} {self.SSDCachebenchTest.WL_SUITES}")
+            # pyrefly: ignore [missing-attribute]
             self.log_info(f"Removing {self.saved_old_wl} on {host.hostname}")
+            # pyrefly: ignore [missing-attribute]
             host.run(f"rm -rf {self.saved_old_wl}")
 
         self.log_info("++++++ Deleting the RAIDed Volumes +++++++")
@@ -562,6 +605,7 @@ class SSDCachebenchTest(SSDTestBase):
             )
             self.sweep_param_value = NvmeResizeUtil.DEFAULT_OP_PERCENT
             if self.fdp_enabled:
+                # pyrefly: ignore [bad-argument-type]
                 FDPUtils.fdp_cleanup(self.host, self.nvme_id_ctrls)
             ns_validate_queue = []
             for device in self.nvme_id_ctrls:
@@ -578,6 +622,7 @@ class SSDCachebenchTest(SSDTestBase):
                 )
                 if ns_validate_queue:
                     AutovalThread.wait_for_autoval_thread(ns_validate_queue)
+            # pyrefly: ignore [missing-attribute]
             self.log_info("NVME LIST AFTER CLEANUP\n" + self.host.run("nvme list"))
         super().cleanup(**kwargs)
 
@@ -592,14 +637,18 @@ class SSDCachebenchTest(SSDTestBase):
                 # Save old workloads
                 self.saved_old_wl = f"/tmp/test_configs_{self.create_timestamp()}"
                 self.log_info(f"Saving old test configs at {self.saved_old_wl}")
+                # pyrefly: ignore [missing-attribute]
                 host.run(f"cp -rf {SSDCachebenchTest.WL_SUITES} {self.saved_old_wl}")
                 # Put in new workloads
                 self.log_info(
                     f"Copying test configs from {local_folder} to "
+                    # pyrefly: ignore [missing-attribute]
                     + f"{SSDCachebenchTest.WL_SUITES} on {host.hostname}"
                 )
+                # pyrefly: ignore [missing-attribute]
                 host.put_folder(
                     f"{local_folder}",
+                    # pyrefly: ignore [missing-attribute]
                     f"{SSDCachebenchTest.WL_SUITES}",
                     overwrite=True,
                     verbose=True,
@@ -757,7 +806,7 @@ class JsonUpdate:
 
         """
         new_value = str(new_value).replace("'", '"').replace(" ", "")
-        cmd = "cat %s | echo \"$(jq '.%s = %s')\" > %s" % (
+        cmd = "cat {} | echo \"$(jq '.{} = {}')\" > {}".format(
             file_path,
             JSON_key_path,
             new_value,
@@ -784,5 +833,5 @@ class JsonUpdate:
 
         """
 
-        cmd = "jq '.%s' %s" % (JSON_key_path, file_path)
+        cmd = "jq '.{}' {}".format(JSON_key_path, file_path)
         return host.run(cmd)

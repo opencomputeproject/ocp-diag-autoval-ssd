@@ -8,15 +8,12 @@ from time import sleep
 from typing import Any, Optional, Union
 
 from autoval.lib.host.component.component import COMPONENT
-
 from autoval.lib.host.host import Host
 from autoval.lib.utils.autoval_errors import ErrorType
-
 from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_thread import AutovalThread
 from autoval.lib.utils.autoval_utils import AutovalUtils
-
 from autoval.lib.utils.file_actions import FileActions
 from autoval.lib.utils.generic_utils import GenericUtils
 from autoval_ssd.lib.utils.fio.fio_synth_flash_utils import FioSynthFlashUtils
@@ -77,17 +74,21 @@ class SSDSynthFlashTest(SSDTestBase):
         self._install_required_packages()
         FioSynthFlashUtils.tool_setup(self.host)
         # Check for packages on system.
+        # pyrefly: ignore [bad-argument-type]
         runtime_chk = self.chk_host_runtime(host, self.storage_test_tools)
         self.validate_condition(runtime_chk, "Validate installed packages.")
 
         # Create Remote Temp Directory
         success, temp_dir = self.create_temp_directory(host)
         self.validate_condition(
-            success, f"Create temp directory {temp_dir} on {host.hostname}."
+            success,
+            # pyrefly: ignore [missing-attribute]
+            f"Create temp directory {temp_dir} on {host.hostname}.",
         )
         self.work_dir = temp_dir
 
         # Copy workloads into the temp dir
+        # pyrefly: ignore [missing-attribute]
         host.run(f"cp -rf {SSDSynthFlashTest.WL_SUITES} {self.work_dir}/workloads")
 
         # Transfer over additional workloads
@@ -108,9 +109,10 @@ class SSDSynthFlashTest(SSDTestBase):
 
     def _install_required_packages(self) -> None:
         SystemUtils.install_rpms(
+            # pyrefly: ignore [bad-argument-type]
             self.host,
             self.storage_test_tools,
-            disable_tools_upgrade=self.disable_tools_upgrade,
+            disable_tools_upgrade=self.disable_tools_upgrade,  # pyrefly: ignore [bad-argument-type]
             force_install=True,
         )
 
@@ -163,6 +165,7 @@ class SSDSynthFlashTest(SSDTestBase):
 
             # Displaying the FioSynth Version for the workload config
             self.log_info(
+                # pyrefly: ignore [bad-argument-type]
                 f"Displaying the FioSynth version for the current config: {ComponentTestBase.display_fiosynth_version(self.host)}"
             )
 
@@ -191,7 +194,9 @@ class SSDSynthFlashTest(SSDTestBase):
             if self.dix_ns_resize:
                 lbaf_to_flbas_map = (
                     NvmeResizeUtil.validate_drives_support_dix_resize_lba_formats(
-                        self.host, self.test_specific_drives
+                        # pyrefly: ignore [bad-argument-type]
+                        self.host,
+                        self.test_specific_drives,
                     )
                 )
                 if self.lba_format:
@@ -249,6 +254,7 @@ class SSDSynthFlashTest(SSDTestBase):
         self.sweep_param_value = NvmeResizeUtil.DEFAULT_OP_PERCENT
         NvmeResizeUtil.perform_resize(
             self.host,
+            # pyrefly: ignore [bad-argument-type]
             self.test_specific_drives,
             sweep_param_key=self.sweep_param_key,
             sweep_param_unit=self.sweep_param_unit,
@@ -270,14 +276,19 @@ class SSDSynthFlashTest(SSDTestBase):
 
         try:
             self.sweep_param_key: "NvmeResizeUtil.SweepParamKeyEnum" = (
+                # pyrefly: ignore [bad-index]
                 NvmeResizeUtil.SweepParamKeyEnum[workload_config.get("sweep_param_key")]
             )
             self.sweep_param_unit: "NvmeResizeUtil.SweepParamUnitEnum" = (
                 NvmeResizeUtil.SweepParamUnitEnum[
+                    # pyrefly: ignore [bad-index]
                     workload_config.get("sweep_param_unit")
                 ]
             )
-            self.sweep_param_value = workload_config.get("sweep_param_value")
+            sweep_param_value = workload_config.get("sweep_param_value")
+            if sweep_param_value is None:
+                raise KeyError("sweep_param_value")
+            self.sweep_param_value = sweep_param_value
         except KeyError as exc:
             raise TestError(
                 f"Invalid/Missing sweep param in test_control: {str(exc)}",
@@ -288,6 +299,7 @@ class SSDSynthFlashTest(SSDTestBase):
         self.performed_resize = True
         NvmeResizeUtil.perform_resize(
             self.host,
+            # pyrefly: ignore [bad-argument-type]
             self.test_specific_drives,
             sweep_param_key=self.sweep_param_key,
             sweep_param_unit=self.sweep_param_unit,
@@ -296,8 +308,9 @@ class SSDSynthFlashTest(SSDTestBase):
             cycle=self.cycle,
         )
 
+    # pyrefly: ignore [bad-override]
     def dix_ns_resize_setup(
-        self, lbaf_to_flbas_map: dict[str, int]
+        self, lbaf_to_flbas_map: dict[str, int] | None = None
     ) -> Iterable[list[Drive]]:
         """
         Set up the DIX namespace resize process for the test drives.
@@ -339,6 +352,7 @@ class SSDSynthFlashTest(SSDTestBase):
 
             NvmeResizeUtil.perform_resize(
                 self.host,
+                # pyrefly: ignore [bad-argument-type]
                 dix_test_drives,
                 sweep_param_key=self.sweep_param_key,
                 sweep_param_unit=self.sweep_param_unit,
@@ -356,12 +370,16 @@ class SSDSynthFlashTest(SSDTestBase):
                 drive_name[5:] for drive_name in self.data_ssds.devname.tolist()
             ]
             dix_test_drives = StorageDeviceFactory(
-                self.host, dix_drives_list, None
+                # pyrefly: ignore [bad-argument-type]
+                self.host,
+                dix_drives_list,
+                None,
             ).create()
 
             self.log_info(f"test drives {dix_test_drives}")
             yield dix_test_drives
 
+    # pyrefly: ignore [bad-override]
     def lba_format_setup(
         self, lbaf_to_flbas_map: Optional[dict[str, int]] = None
     ) -> None:
@@ -380,7 +398,9 @@ class SSDSynthFlashTest(SSDTestBase):
         for drive in self.test_specific_drives:
             if lbaf_to_flbas_map is None:
                 drive_lbaf_map = NvmeResizeUtil.get_lbaf_to_flbas_map(
-                    self.host, drive.block_name
+                    # pyrefly: ignore [bad-argument-type]
+                    self.host,
+                    drive.block_name,
                 )
             else:
                 drive_lbaf_map = lbaf_to_flbas_map
@@ -392,7 +412,7 @@ class SSDSynthFlashTest(SSDTestBase):
                 error_type=ErrorType.INPUT_ERR,
             )
 
-            lbaf = drive_lbaf_map[self.lba_format]
+            lbaf = drive_lbaf_map[self.lba_format]  # pyrefly: ignore [bad-index]
 
             AutovalUtils.validate_no_exception(
                 NVMeUtils.format_nvme,
@@ -401,6 +421,7 @@ class SSDSynthFlashTest(SSDTestBase):
                 component=COMPONENT.STORAGE_DRIVE,
                 error_type=ErrorType.NVME_ERR,
             )
+        # pyrefly: ignore [missing-attribute]
         self.log_info(f"NVME LIST:\n{self.host.run('nvme list')}")
         self.log_info(f"Test Drives: {self.test_specific_drives}")
         self.performed_resize = True
@@ -413,16 +434,21 @@ class SSDSynthFlashTest(SSDTestBase):
             TestError: If FDP support validation fails.
         """
 
+        # pyrefly: ignore [bad-argument-type]
         FDPUtils.validate_fdp_support(self.host, self.nvme_id_ctrls)
+        # pyrefly: ignore [bad-argument-type]
         FDPUtils.fdp_setup(self.host, self.nvme_id_ctrls)
         AutovalLog.log_info(
+            # pyrefly: ignore [missing-attribute]
             "FDP setup completed\n NVME LIST\n" + self.host.run("nvme list")
         )
         self.fdp_enabled = True
         self.performed_resize = True
 
     def set_power_state(
-        self, workload_config: dict[str, Any], drives: Optional[list[Drive]] = None
+        self,
+        workload_config: dict[str, Any] | None = None,
+        drives: Optional[list[Drive]] = None,
     ) -> None:
         """
         Set the power state of all drives in a test.
@@ -434,6 +460,8 @@ class SSDSynthFlashTest(SSDTestBase):
         # Set Power State on devices
         if drives is None:
             drives = self.test_specific_drives
+        if workload_config is None:
+            return
         if workload_config.get("set_power_state", False):
             power_state = workload_config.get("power_state", None)
             if power_state is None:
@@ -464,8 +492,10 @@ class SSDSynthFlashTest(SSDTestBase):
         if drives is None:
             drives = self.test_specific_drives
 
+        # pyrefly: ignore [not-iterable]
         for workload in workload_config.get("workload_suites"):
             self.latency_monitor = LatencyMonitor(
+                # pyrefly: ignore [bad-argument-type]
                 host=self.host,
                 test_drives=drives,
                 test_control=self.test_control,
@@ -518,6 +548,7 @@ class SSDSynthFlashTest(SSDTestBase):
             if self.synth_verify:
                 result_dirs = [
                     i
+                    # pyrefly: ignore [missing-attribute]
                     for i in self.host.run(f"ls {self.work_dir}").split("\n")
                     if i.startswith(f"test{index}")
                 ]
@@ -534,6 +565,7 @@ class SSDSynthFlashTest(SSDTestBase):
                     result_dir = os.path.join(self.work_dir, result_dir)
                     AutovalLog.log_info(f" synth verification result dir {result_dir}")
                     SSDSynthFlashTest.synth_output_validation(
+                        # pyrefly: ignore [bad-argument-type]
                         self.host,
                         result_dir,
                         workload,
@@ -560,12 +592,17 @@ class SSDSynthFlashTest(SSDTestBase):
         host = self.host
         if hasattr(self, "saved_old_wl"):
             self.log_info(
+                # pyrefly: ignore [missing-attribute]
                 f"Restoring workloads from {self.saved_old_wl} on {host.hostname}"
             )
             # First remove current folder, then restore the original folder.
+            # pyrefly: ignore [missing-attribute]
             host.run(f"rm -rf {self.SSDSynthFlashTest.WL_SUITES}")
+            # pyrefly: ignore [missing-attribute]
             host.run(f"cp -rf {self.saved_old_wl} {self.SSDSynthFlashTest.WL_SUITES}")
+            # pyrefly: ignore [missing-attribute]
             self.log_info(f"Removing {self.saved_old_wl} on {host.hostname}")
+            # pyrefly: ignore [missing-attribute]
             host.run(f"rm -rf {self.saved_old_wl}")
 
         self.log_info(" ")
@@ -586,6 +623,7 @@ class SSDSynthFlashTest(SSDTestBase):
             sweep_param_value = NvmeResizeUtil.DEFAULT_OP_PERCENT
             ns_validate_queue = []
             if self.fdp_enabled:
+                # pyrefly: ignore [bad-argument-type]
                 FDPUtils.fdp_cleanup(self.host, self.nvme_id_ctrls)
             for device in self.nvme_id_ctrls:
                 ns_validate_queue.append(
@@ -602,6 +640,7 @@ class SSDSynthFlashTest(SSDTestBase):
                 if ns_validate_queue:
                     AutovalThread.wait_for_autoval_thread(ns_validate_queue)
             AutovalLog.log_info(
+                # pyrefly: ignore [missing-attribute]
                 "NVME LIST AFTER CLEANUP\n" + self.host.run("nvme list")
             )
         super().cleanup(**kwargs)
@@ -704,12 +743,15 @@ class SSDSynthFlashTest(SSDTestBase):
                 # Save old workloads
                 self.saved_old_wl = f"/tmp/workloads_{self.create_timestamp()}"
                 self.log_info(f"Saving old workloads at {self.saved_old_wl}")
+                # pyrefly: ignore [missing-attribute]
                 host.run(f"cp -rf {SSDSynthFlashTest.WL_SUITES} {self.saved_old_wl}")
                 # Put in new workloads
                 self.log_info(
                     f"Copying workloads from {local_folder} to "
+                    # pyrefly: ignore [missing-attribute]
                     + f"{SSDSynthFlashTest.WL_SUITES} on {self.host.hostname}"
                 )
+                # pyrefly: ignore [missing-attribute]
                 host.put_folder(
                     f"{local_folder}",
                     f"{SSDSynthFlashTest.WL_SUITES}",
@@ -770,7 +812,10 @@ class SSDSynthFlashTest(SSDTestBase):
                     host, remote_run_folder, local_run_folder, msgs=msgs
                 )
                 synthflash_data = self._process_results(
-                    host, self.result_folder, msgs=msgs
+                    host,
+                    # pyrefly: ignore [bad-argument-type]
+                    self.result_folder,
+                    msgs=msgs,
                 )
                 self.test_results = synthflash_data
         except Exception:
@@ -804,6 +849,7 @@ class SSDSynthFlashTest(SSDTestBase):
 
         for key in fio_data.keys():
             if "json" in key:
+                # pyrefly: ignore [missing-attribute]
                 fio_data[key].global_options = None
 
         self.run_entry.append(
@@ -994,4 +1040,5 @@ class SSDSynthFlashTest(SSDTestBase):
                             temp_dict[key.strip("\r")] = val.strip("\r")
                     summary.append(temp_dict)
 
+        # pyrefly: ignore [bad-return]
         return (fio_results, config, summary)
