@@ -505,11 +505,15 @@ class NvmeCli(StorageTestBase):
         Returns:
             The oacs value of the drive as a dict.
         """
+        # NVMe OACS bit 4 indicates Device Self-Test command support.
+        DEVICE_SELF_TEST_OACS_BIT = 4
+        DEVICE_SELF_TEST_OACS_MASK = 1 << DEVICE_SELF_TEST_OACS_BIT
+
         oacs = NVMeUtils.get_id_ctrl(self.host, drive.block_name)["oacs"]
         self.log_info(f"Test to Check dev_self_test management {oacs} {hex(oacs)}")
-        support_dev_self_test_management = oacs & 0x8
+        support_dev_self_test_management = bool(oacs & DEVICE_SELF_TEST_OACS_MASK)
         AutovalUtils.validate_condition(
-            support_dev_self_test_management == 0x8,
+            support_dev_self_test_management,
             f"Check dev_self_test management support SELF_TEST supported on /dev/{drive}",
             warning=True,
             log_on_pass=True,
