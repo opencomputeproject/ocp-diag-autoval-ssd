@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
-# pyre-unsafe
 """FioSynthFlash test runs Synthetics workloads on HDD and SSD drives"""
 
+from __future__ import annotations
+
 import re
+from collections.abc import Mapping
+from typing import Any
 
 from autoval.lib.host.component.component import COMPONENT
 from autoval.lib.utils.autoval_errors import ErrorType
@@ -11,7 +14,12 @@ from autoval.lib.utils.autoval_exceptions import TestError
 from autoval.lib.utils.autoval_log import AutovalLog
 from autoval.lib.utils.autoval_utils import AutovalUtils
 from autoval.lib.utils.file_actions import FileActions
+from autoval_ssd.lib.utils.disk_utils import DiskUtils
+from autoval_ssd.lib.utils.filesystem_utils import FilesystemUtils
 from autoval_ssd.lib.utils.fio.fio_synth_flash_utils import FioSynthFlashUtils
+from autoval_ssd.lib.utils.storage.boot_drive_partition_utils import (
+    BootDrivePartitionUtils,
+)
 from autoval_ssd.lib.utils.storage.nvme.latency_monitor_utils import LatencyMonitor
 from autoval_ssd.lib.utils.storage.storage_test_base import StorageTestBase
 from autoval_ssd.lib.utils.storage.storage_utils import StorageUtils
@@ -36,7 +44,7 @@ class FioSynthFlash(StorageTestBase):
     drive. If drive_filter is mentioned, do either HDD only or all drives.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Attributes Setup Information
         @att synth_options         : additional fiosynth option to go on command.
@@ -65,6 +73,12 @@ class FioSynthFlash(StorageTestBase):
         self.lm_log_page_validation = self.test_control.get(
             "lm_log_page_validation", False
         )
+        self.boot_drive_partitioned: bool = False
+        self.boot_drive_partition_size_gb: int = self.test_control.get(
+            "boot_drive_partition_size_gb",
+            BootDrivePartitionUtils.DEFAULT_FIO_PARTITION_SIZE_GB,
+        )
+        self.fio_device_overrides: dict[str, str] = {}
 
     def get_test_params(self) -> str:
         params = "raid {} test_drive_filter {} synth_options {}".format(
@@ -77,7 +91,7 @@ class FioSynthFlash(StorageTestBase):
         temp_key = re.sub(r"_run\d+", "", key)
         return temp_key
 
-    def check_relevant(self, key) -> bool:
+    def check_relevant(self, key: dict[str, str]) -> bool:
         """Chedck if key is relevant to test"""
         lowered_key = {k.lower(): v.lower() for k, v in key.items() if v}
         for filtered_key in PERFORMANCE_METRICS:
@@ -92,7 +106,7 @@ class FioSynthFlash(StorageTestBase):
                 return True
         return False
 
-    def filter_data(self, data) -> dict:
+    def filter_data(self, data: Any) -> dict:
         """
         Filter out the only data it needs for test_result.json.
         Here, we are also removing the string "run1".
@@ -119,7 +133,7 @@ class FioSynthFlash(StorageTestBase):
                 filtered_data[filtered_key] = data[key]
         return filtered_data
 
-    def convert_test_result_format(self, data, time) -> list:
+    def convert_test_result_format(self, data: Mapping[str, str], time: int) -> list:
         """
         convert the dictionary into test_result format.
 
@@ -142,7 +156,9 @@ class FioSynthFlash(StorageTestBase):
             result.append(temp_list)
         return result
 
-    def run_fiosynth_parser(self, file_path: str, drive_serial_num, time) -> dict:
+    def run_fiosynth_parser(
+        self, file_path: str, drive_serial_num: str, time: int
+    ) -> dict:
         """
         parent function of formatting the csvfile to dictionary and into
         test_control format. Return the formatted dictionary data.
@@ -236,15 +252,96 @@ class FioSynthFlash(StorageTestBase):
                         )
 
     # Override
-    def setup(self, *args, **kwargs) -> None:
+    def setup(self, *args: Any, **kwargs: Any) -> None:
         StorageUtils.change_nvme_io_timeout(
-            host=self.host, test_phase="setup()", new_timeout=8
+            # pyrefly: ignore [bad-argument-type]
+            host=self.host,
+            test_phase="setup()",
+            new_timeout=8,
         )
         self.storage_test_tools.extend(["fiosynth"])
         super().setup(*args, **kwargs)
         self.synth_result_dir = FioSynthFlashUtils.setup_synth_resultdir(
             self.host, self.dut_logdir[self.host.hostname]
         )
+        self._setup_boot_drive_target()
+
+    def _setup_boot_drive_target(self) -> None:
+        """Use an unmounted scratch partition when testing a mounted boot SSD."""
+        if not any(drive.block_name == self.boot_drive for drive in self.test_drives):
+            return
+        host = self.host
+        if host is None:
+            raise TestError(
+                "Cannot prepare a boot-drive scratch partition without a host",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.SYSTEM_ERR,
+            )
+        if not DiskUtils.is_drive_mounted(host, self.boot_drive):
+            AutovalLog.log_info(
+                f"Boot drive {self.boot_drive} is unmounted; using the whole device"
+            )
+            return
+        if not re.fullmatch(r"nvme\d+n\d+", self.boot_drive):
+            raise TestError(
+                f"Mounted boot drive {self.boot_drive} is not an NVMe device; "
+                "a FioSynthFlash scratch partition is unsupported",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.TEST_TOPOLOGY_ERR,
+            )
+
+        root_info = FilesystemUtils.get_df_info(host, self.boot_drive, search="/")
+        if root_info.get("type") != "btrfs":
+            raise TestError(
+                f"Mounted boot drive {self.boot_drive} uses "
+                f"{root_info.get('type', 'an unknown filesystem')}; "
+                "FioSynthFlash scratch partitions require Btrfs",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.TEST_TOPOLOGY_ERR,
+            )
+        if self.format_drives:
+            raise TestError(
+                f"Refusing to format mounted boot drive {self.boot_drive}",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.INPUT_ERR,
+            )
+
+        partition_created = BootDrivePartitionUtils.create_fio_partition(
+            host,
+            self.boot_drive,
+            partition_size_gb=self.boot_drive_partition_size_gb,
+        )
+        if not partition_created:
+            raise TestError(
+                f"Failed to create a {self.boot_drive_partition_size_gb}GB FIO "
+                f"scratch partition on mounted boot drive {self.boot_drive}; "
+                "refusing to run fiosynth against the whole device",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.DRIVE_ERR,
+            )
+
+        self.boot_drive_partitioned = True
+        target_device = BootDrivePartitionUtils.get_fio_partition(
+            host,
+            self.boot_drive,
+            partition_size_gb=self.boot_drive_partition_size_gb,
+        )
+        partition_block = target_device.removeprefix("/dev/")
+        partition_suffix = target_device.removeprefix(f"/dev/{self.boot_drive}p")
+        drive_partitions = DiskUtils.get_partitions_and_mount_points_in_drive(host)
+        partition_mounted = any(
+            partition.get("name") == partition_block
+            and DiskUtils.has_mountpoint(partition)
+            for partition in drive_partitions.get(self.boot_drive, [])
+        )
+        if not partition_suffix.isdigit() or partition_mounted:
+            raise TestError(
+                f"Invalid or mounted FIO scratch partition {target_device} for "
+                f"boot drive {self.boot_drive}",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.DRIVE_ERR,
+            )
+        self.fio_device_overrides[self.boot_drive] = target_device
 
     def execute(self) -> None:
         """
@@ -274,7 +371,10 @@ class FioSynthFlash(StorageTestBase):
         self.backup_workload_json()
 
         self.latency_monitor = LatencyMonitor(
-            host=self.host, test_drives=self.test_drives, test_control=self.test_control
+            # pyrefly: ignore [bad-argument-type]
+            host=self.host,
+            test_drives=self.test_drives,
+            test_control=self.test_control,
         )
 
         if self.lm_log_page_validation:
@@ -310,7 +410,7 @@ class FioSynthFlash(StorageTestBase):
                 "Skipping latency monitor validation for this test."
             )
 
-    def run_workload(self, workload: str):
+    def run_workload(self, workload: str) -> None:
         """
         Run workload precondition or stress
 
@@ -345,7 +445,7 @@ class FioSynthFlash(StorageTestBase):
         self.result_handler.add_test_results(self.formatted_test_result)
         self.check_errors()
 
-    def run_fio_synth_flash(self, workload_type: str, result_dir: str):
+    def run_fio_synth_flash(self, workload_type: str, result_dir: str) -> None:
         """
         Run fio_synth_flash command and collect the result.
 
@@ -354,9 +454,12 @@ class FioSynthFlash(StorageTestBase):
             result_dir: result directory
         """
         lm_enabled_drives = self.latency_monitor.enable(
-            workload=workload_type, working_directory=self.synth_result_dir
+            workload=workload_type,
+            # pyrefly: ignore [bad-argument-type]
+            working_directory=self.synth_result_dir,
         )
         test_result = FioSynthFlashUtils.start_fio_synth_flash(
+            # pyrefly: ignore [bad-argument-type]
             host=self.host,
             workload=workload_type,
             resultsdir=result_dir,
@@ -365,12 +468,14 @@ class FioSynthFlash(StorageTestBase):
             test_drives=self.test_drives,
             ignore_error=self.ignore_error,
             lm_enabled_drives=lm_enabled_drives,
+            fio_device_overrides=self.fio_device_overrides,
         )
 
         self.check_block_devices_available()
 
         if self.test_drive_filter and self.in_parallel and self.synth_verify:
             FioSynthFlashUtils.synth_output_validation(
+                # pyrefly: ignore [bad-argument-type]
                 self.host,
                 result_dir,
                 workload_type,
@@ -388,6 +493,7 @@ class FioSynthFlash(StorageTestBase):
                 synth_workload_result_dir=result_dir,
                 lm_enabled_drives=lm_enabled_drives,
             )
+            # pyrefly: ignore [bad-argument-type]
             self.latency_monitor.disable(working_directory=self.synth_result_dir)
         self.collect_drive_performance_data(test_result)
 
@@ -407,7 +513,7 @@ class FioSynthFlash(StorageTestBase):
                     host=self.host,
                 )
 
-    def has_workload_precondition(self, workload_type) -> bool:
+    def has_workload_precondition(self, workload_type: str) -> bool:
         """Checks if workload has precondition job"""
         workload_type_json_data = FileActions().read_data(
             f"{FIO_SYNTH_FLASH_WORKLOAD_SUITES}" % (workload_type),
@@ -421,7 +527,7 @@ class FioSynthFlash(StorageTestBase):
             return True
         return False
 
-    def prepare_workload_precondition(self, workload_type):
+    def prepare_workload_precondition(self, workload_type: str) -> tuple[str, str]:
         """Run nvme drives precondition job"""
         workload_name = f"{workload_type}_precond"
         synth_precond_result_dir = f"{self.synth_result_dir}/{workload_name}/"
@@ -441,7 +547,7 @@ class FioSynthFlash(StorageTestBase):
         )
         return (workload_name, synth_precond_result_dir)
 
-    def prepare_workload_stress(self, workload_type):
+    def prepare_workload_stress(self, workload_type: str) -> tuple[str, str]:
         """Run workload stress job"""
         workload_name = f"{workload_type}_stress_test"
         synth_workload_result_dir = f"{self.synth_result_dir}/{workload_name}/"
@@ -462,8 +568,36 @@ class FioSynthFlash(StorageTestBase):
         )
         return (workload_name, synth_workload_result_dir)
 
+    def _cleanup_boot_drive_partition(self) -> None:
+        if not self.boot_drive_partitioned:
+            return
+        host = self.host
+        if host is None:
+            raise TestError(
+                "Cannot restore the boot-drive scratch partition without a host",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.SYSTEM_ERR,
+            )
+        try:
+            BootDrivePartitionUtils.cleanup_fio_partition(
+                host,
+                self.boot_drive,
+                partition_size_gb=self.boot_drive_partition_size_gb,
+            )
+        finally:
+            self.boot_drive_partitioned = False
+            self.fio_device_overrides.pop(self.boot_drive, None)
+
     # Override
-    def cleanup(self, *args, **kwargs) -> None:
+    def cleanup(self, *args: Any, **kwargs: Any) -> None:
+        AutovalUtils.validate_no_exception(
+            self._cleanup_boot_drive_partition,
+            [],
+            "Restore boot drive after FioSynthFlash scratch partition",
+            raise_on_fail=False,
+            component=COMPONENT.STORAGE_DRIVE,
+            error_type=ErrorType.DRIVE_ERR,
+        )
         try:
             AutovalLog.log_info("[FioSynthFlash Log] Restoring workload json file.")
             for workload_type in self.workload:
@@ -475,6 +609,7 @@ class FioSynthFlash(StorageTestBase):
                 )
                 if self.latency_monitor:
                     self.latency_monitor.disable(
+                        # pyrefly: ignore [bad-argument-type]
                         working_directory=self.synth_result_dir,
                     )
         except Exception as exe:
@@ -483,6 +618,9 @@ class FioSynthFlash(StorageTestBase):
             )
         finally:
             StorageUtils.change_nvme_io_timeout(
-                host=self.host, test_phase="cleanup()", new_timeout=30
+                # pyrefly: ignore [bad-argument-type]
+                host=self.host,
+                test_phase="cleanup()",
+                new_timeout=30,
             )
             super().cleanup(*args, **kwargs)
