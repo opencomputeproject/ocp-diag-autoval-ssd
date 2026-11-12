@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
-# pyre-unsafe
 """Utils for FioSynthFlash test"""
+
+from __future__ import annotations
 
 import json
 import os
 import re
 import time
+from collections.abc import Mapping
 from glob import glob
 from typing import Optional
 
@@ -43,15 +45,15 @@ class FioSynthFlashUtils:
         function.
     """
 
-    results = []
+    results: list[tuple[NVMeDrive, str, int, str, list[str]]] = []
 
     @staticmethod
-    def tool_setup(host) -> None:
+    def tool_setup(host: Host) -> None:
         AutovalLog.log_info("Checking for fiosynth installation")
         FioSynthFlashUtils.get_version(host)
 
     @staticmethod
-    def get_version(host) -> None:
+    def get_version(host: Host) -> None:
         out = host.run("fiosynth -v", ignore_status=True)
         pattern = r"\d+\.\d+\.*\d*"
         match = re.search(pattern, out)
@@ -67,7 +69,7 @@ class FioSynthFlashUtils:
             )
 
     @staticmethod
-    def find_csv_files(host, results_dir: str) -> list:
+    def find_csv_files(host: Host, results_dir: str) -> list[str]:
         """
         Find the output csvfile from fio_synth_flash. Returns a list
         of found csvfiles from that directory.
@@ -86,7 +88,9 @@ class FioSynthFlashUtils:
         return found
 
     @staticmethod
-    def find_errors(host, results_dir: str, ignore_error: bool = False) -> list:
+    def find_errors(
+        host: Host, results_dir: str, ignore_error: bool = False
+    ) -> list[str]:
         """
         Find error files and check if there is error in result by going through
         each json files from the result directory.
@@ -164,6 +168,7 @@ class FioSynthFlashUtils:
         test_drives=None,
         ignore_error: bool = False,
         lm_enabled_drives: Optional[list[str]] = None,
+        fio_device_overrides: Mapping[str, str] | None = None,
     ):
         """
         This is the main function to start the fio_synth_flash.
@@ -197,6 +202,13 @@ class FioSynthFlashUtils:
         parallel = options.get("parallel", False)
         synth_options = options.get("synth_options", None)
         synth_verify = options.get("synth_verify", None)
+        if fio_device_overrides and (raid or not test_drive_filter):
+            raise TestError(
+                "FioSynth device overrides require explicit filtered drives; "
+                "ALL and ALLRAID could include the mounted physical device",
+                component=COMPONENT.STORAGE_DRIVE,
+                error_type=ErrorType.INPUT_ERR,
+            )
         if synth_verify and (not parallel):
             msg = f"Current setting synth_verify={synth_verify}, parallel={parallel}"
             raise TestError(
@@ -211,6 +223,7 @@ class FioSynthFlashUtils:
             results_file = workload + "_raid_results"
             cmd += " -f %s -d ALLRAID" % results_file
         elif test_drive_filter:
+            # pyrefly: ignore [not-iterable]
             list_of_drives = "_".join(str(drive.block_name) for drive in test_drives)
             AutovalLog.log_info(
                 "[FioSynthFlash Log] Running on mentioned test drives: %s"
@@ -219,6 +232,7 @@ class FioSynthFlashUtils:
             if parallel:
                 AutovalLog.log_info("[FioSynthFlash Log] Running in Parallel")
                 t_queue_list = []
+                # pyrefly: ignore [not-iterable]
                 for drive in test_drives:
                     t_queue_list.append(
                         AutovalThread.start_autoval_thread(
@@ -230,20 +244,30 @@ class FioSynthFlashUtils:
                             cmd=cmd,
                             synth_options=synth_options,
                             ignore_error=ignore_error,
+                            device_path=FioSynthFlashUtils._resolve_fio_device(
+                                drive, fio_device_overrides
+                            ),
                         )
                     )
                 if t_queue_list:
                     AutovalThread.wait_for_autoval_thread(t_queue_list)
                 if synth_verify:
                     FioSynthFlashUtils.synth_output_validation(
-                        host, resultsdir, workload, test_drives, lm_enabled_drives
+                        host,
+                        resultsdir,
+                        workload,
+                        # pyrefly: ignore [bad-argument-type]
+                        test_drives,
+                        lm_enabled_drives,
                     )
                 return FioSynthFlashUtils.results
             else:
                 results_file = workload + "_%s_results" % list_of_drives
                 cmd += " -f %s" % results_file
                 list_of_block_names = [
-                    "/dev/%s" % drive.block_name for drive in test_drives
+                    FioSynthFlashUtils._resolve_fio_device(drive, fio_device_overrides)
+                    # pyrefly: ignore [not-iterable]
+                    for drive in test_drives
                 ]
                 list_of_block_names = ":".join(list_of_block_names)
                 cmd += " -d %s" % list_of_block_names
@@ -262,20 +286,32 @@ class FioSynthFlashUtils:
         return [(result_directory, time_stamp, cmd, errors)]
 
     @staticmethod
+    def _resolve_fio_device(
+        drive: NVMeDrive,
+        fio_device_overrides: Mapping[str, str] | None = None,
+    ) -> str:
+        if fio_device_overrides is not None:
+            override = fio_device_overrides.get(drive.block_name)
+            if override is not None:
+                return override
+        return f"/dev/{drive.block_name}"
+
+    @staticmethod
     def run_fio_synth_parallel(
-        host,
+        host: Host,
         workload: str,
         resultsdir: str,
-        drive,
+        drive: NVMeDrive,
         cmd: str,
-        synth_options=None,
+        synth_options: str | None = None,
         ignore_error: bool = False,
+        device_path: str | None = None,
     ) -> None:
         host_dict = AutovalUtils.get_host_dict(host)
         new_host = Host(host_dict)
         results_file = workload + ("_%s_results" % str(drive.block_name))
         cmd += " -f %s" % results_file
-        cmd += " -d /dev/%s" % str(drive.block_name)
+        cmd += f" -d {device_path or f'/dev/{drive.block_name}'}"
         output_folder, cmd = FioSynthFlashUtils.run_fio_synth_cmd(
             host=new_host, cmd=cmd, resultsdir=resultsdir, synth_options=synth_options
         )
@@ -288,7 +324,7 @@ class FioSynthFlashUtils:
         )
 
     @staticmethod
-    def csv_output_validation(host, resultsdir: str) -> list:
+    def csv_output_validation(host: Host, resultsdir: str) -> list[str]:
         """
         Validate the fio_synth output by checking if csv files exist
         within the result directory.
@@ -307,7 +343,7 @@ class FioSynthFlashUtils:
 
     @staticmethod
     def run_fio_synth_cmd(
-        host, cmd: str, resultsdir: str, synth_options=None
+        host: Host, cmd: str, resultsdir: str, synth_options: str | None = None
     ) -> tuple[str, str]:
         """
         run fio_synth command
@@ -338,7 +374,7 @@ class FioSynthFlashUtils:
         return result_folder, cmd
 
     @staticmethod
-    def parse_out_result_folder(output) -> str:
+    def parse_out_result_folder(output: str) -> str:
         """
         Once get the output from running fio_synth_flash command, get the
         result directory from that string output.
@@ -356,7 +392,7 @@ class FioSynthFlashUtils:
 
     @staticmethod
     def synth_output_validation(
-        host,
+        host: Host,
         results_dir: str,
         synth_workload: str,
         test_drives: list,
@@ -477,11 +513,11 @@ class FioSynthFlashUtils:
 
     @staticmethod
     def compare_csv_json(
-        host,
+        host: Host,
         global_target: str,
         synth_workload: str,
         benchmark_dict: dict[str, dict],
-        csv_dict: dict,
+        csv_dict: Mapping[str, str],
         drive: str,
         verify_workload: bool,
         lm_enabled_drives: Optional[list[str]] = None,
@@ -514,7 +550,6 @@ class FioSynthFlashUtils:
                 "[%s]: Precondition output verification is skipped" % drive
             )
             return None
-        # TODO: T119547981
         # Skipping BurstTrim validation.
         elif "BurstTrim" in csv_dict["Jobname"]:
             AutovalLog.log_info(
@@ -630,7 +665,7 @@ class FioSynthFlashUtils:
             return [os.path.join(results_dir, _file) for _file in files]
 
     @staticmethod
-    def setup_synth_resultdir(host, resultsdir):
+    def setup_synth_resultdir(host: Host | None, resultsdir: str) -> str:
         """
         Setup the path for result directory for fio_synth result files.
         If the path already exists, then do not try to create.
